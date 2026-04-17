@@ -150,7 +150,15 @@ export function getMessagesBySession(sessionId: string): DbMessage[] {
 }
 
 // 创建消息
-export function createMessage(message: Omit<DbMessage, 'model' | 'tool_calls'> & { model?: string | null; tool_calls?: string | null }): DbMessage {
+export function createMessage(message: {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  model?: string | null;
+  created_at: string;
+  tool_calls?: string | null;
+}): DbMessage {
   const stmt = db.prepare(`
     INSERT INTO messages (id, session_id, role, content, model, created_at, tool_calls)
     VALUES (?, ?, ?, ?, ?, ?, ?)
