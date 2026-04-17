@@ -22,9 +22,8 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/server ./server
+COPY --from=builder /app/dist-server ./dist-server
 COPY --from=builder /app/package.json ./
-COPY tsconfig.json ./
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data
@@ -41,4 +40,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Start command
-CMD ["node", "server/index.ts"]
+CMD ["node", "dist-server/server/index.js"]

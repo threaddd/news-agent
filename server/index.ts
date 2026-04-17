@@ -28,11 +28,22 @@ const PERMISSION_TIMEOUT = 5 * 60 * 1000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// 修正路径：dist-server/server -> 项目根目录
+const rootDir = path.resolve(__dirname, '..', '..');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
+
+// 静态文件服务
+app.use(express.static(path.join(rootDir, 'dist')));
+
+// SPA 路由支持
+app.get('*', (req, res) => {
+  res.sendFile(path.join(rootDir, 'dist', 'index.html'));
+});
 
 // 缓存可用模型列表
 let cachedModels: Array<{ modelId: string; name: string; description?: string }> = [];
@@ -607,8 +618,8 @@ app.post("/api/chat", async (req, res) => {
 
 请根据用户需求，灵活运用以上能力提供专业、高效的新闻生产支持服务。`;
   
-  // 工作目录：优先使用请求中的 cwd，否则使用当前目录
-  const workingDir = cwd || process.cwd();
+  // 工作目录：优先使用请求中的 cwd，否则使用项目根目录
+  const workingDir = cwd || rootDir;
 
   try {
     console.log(`[Chat] 调用 SDK query...`);
