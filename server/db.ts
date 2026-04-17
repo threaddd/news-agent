@@ -96,13 +96,13 @@ export function getSession(id: string): DbSession | undefined {
 }
 
 // 创建会话
-export function createSession(session: DbSession): DbSession {
+export function createSession(session: Omit<DbSession, 'sdk_session_id'> & { sdk_session_id?: string | null }): DbSession {
   const stmt = db.prepare(`
     INSERT INTO sessions (id, title, model, sdk_session_id, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(session.id, session.title, session.model, session.sdk_session_id, session.created_at, session.updated_at);
-  return session;
+  stmt.run(session.id, session.title, session.model, session.sdk_session_id || null, session.created_at, session.updated_at);
+  return { ...session, sdk_session_id: session.sdk_session_id || null };
 }
 
 // 更新会话
@@ -150,7 +150,7 @@ export function getMessagesBySession(sessionId: string): DbMessage[] {
 }
 
 // 创建消息
-export function createMessage(message: DbMessage): DbMessage {
+export function createMessage(message: Omit<DbMessage, 'model' | 'tool_calls'> & { model?: string | null; tool_calls?: string | null }): DbMessage {
   const stmt = db.prepare(`
     INSERT INTO messages (id, session_id, role, content, model, created_at, tool_calls)
     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -160,16 +160,16 @@ export function createMessage(message: DbMessage): DbMessage {
     message.session_id,
     message.role,
     message.content,
-    message.model,
+    message.model || null,
     message.created_at,
-    message.tool_calls
+    message.tool_calls || null
   );
   
   // 更新会话的 updated_at
   const updateStmt = db.prepare('UPDATE sessions SET updated_at = ? WHERE id = ?');
   updateStmt.run(new Date().toISOString(), message.session_id);
   
-  return message;
+  return { ...message, model: message.model || null, tool_calls: message.tool_calls || null };
 }
 
 // 更新消息内容
