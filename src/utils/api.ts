@@ -203,7 +203,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
       options: {
         model,
         systemPrompt: finalSystemPrompt,
-        cwd: options.cwd || process.cwd?.() || '/',
+        cwd: options.cwd || '/',
         permissionMode,
         permissionRequestHandler: async (request) => {
           // 这里可以实现权限请求处理
