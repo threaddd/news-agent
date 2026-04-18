@@ -52,7 +52,8 @@ function ToolCard({ title, description, icon, category, priority, onClick, isAct
   return (
     <button
       onClick={handleClick}
-      className="group relative w-full text-left p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all duration-200 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 hover:-translate-y-1"
+      className="card-gradient-border group relative w-full text-left p-5 rounded-xl border bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all duration-300 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 hover:-translate-y-1"
+      style={{ borderColor: 'var(--td-component-stroke)' }}
     >
       {/* Priority Badge */}
       <span className={`absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full ${priorityColors[priority]}`}>

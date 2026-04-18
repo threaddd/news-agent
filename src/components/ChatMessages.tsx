@@ -38,11 +38,12 @@ export function ChatMessages({
       return (
         <div 
           key={`text-${index}`}
-          className="px-4 py-3 leading-relaxed break-words"
+          className="px-4 py-3 leading-relaxed break-words shadow-sm"
           style={{
             backgroundColor: 'var(--td-bg-color-component)',
             color: 'var(--td-text-color-primary)',
-            borderRadius: '16px 16px 16px 4px'
+            borderRadius: '16px 16px 16px 4px',
+            border: '1px solid var(--td-component-stroke)'
           }}
         >
           <div className="chat-markdown">
@@ -119,17 +120,18 @@ export function ChatMessages({
       {messages.map(message => (
         <div 
           key={message.id} 
-          className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+          className={`flex gap-3 message-enter ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
         >
           <div 
-            className="w-9 h-9 flex items-center justify-center flex-shrink-0 rounded-full self-start"
+            className="w-9 h-9 flex items-center justify-center flex-shrink-0 rounded-full self-start shadow-md"
             style={{
               backgroundColor: message.role === 'user' 
                 ? 'var(--td-brand-color)' 
                 : 'var(--td-bg-color-component)',
               color: message.role === 'user' 
                 ? 'white' 
-                : 'var(--td-text-color-primary)'
+                : 'var(--td-text-color-primary)',
+              border: message.role === 'assistant' ? '1px solid var(--td-component-stroke)' : 'none'
             }}
           >
             {message.role === 'user' ? <User size={18} /> : <Bot size={18} />}
@@ -149,9 +151,9 @@ export function ChatMessages({
             {/* 用户消息 */}
             {message.role === 'user' && (
               <div 
-                className="px-4 py-3 leading-relaxed break-words"
+                className="px-4 py-3 leading-relaxed break-words shadow-sm"
                 style={{
-                  backgroundColor: 'var(--td-brand-color)',
+                  background: 'linear-gradient(135deg, var(--td-brand-color), var(--td-brand-color-hover))',
                   color: 'white',
                   borderRadius: '16px 16px 4px 16px'
                 }}

@@ -109,9 +109,10 @@ export function ChatInput({
       <div className="max-w-3xl mx-auto">
         {/* 渐变边框容器 */}
         <div 
-          className="rounded-2xl p-[2px]"
+          className="rounded-2xl p-[2px] transition-all duration-300"
           style={{
             background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(249, 115, 22, 0.3), rgba(239, 68, 68, 0.3))',
+            boxShadow: '0 2px 12px rgba(239, 68, 68, 0.08)',
           }}
         >
           <div 

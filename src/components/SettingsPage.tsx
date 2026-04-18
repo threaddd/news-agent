@@ -224,14 +224,17 @@ export function SettingsPage({
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* AI 提供商配置 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="rounded-2xl shadow-sm border p-6" style={{ 
+          backgroundColor: 'var(--td-bg-color-container)', 
+          borderColor: 'var(--td-component-stroke)' 
+        }}>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--td-text-color-primary)' }}>
             <Key className="w-5 h-5" />
             AI 提供商配置
           </h3>
 
           {/* 当前状态 */}
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 mb-4">
+          <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ backgroundColor: 'var(--td-bg-color-component)' }}>
             {isConfigured ? (
               <>
                 <CheckCircle className="w-5 h-5 text-green-500" />

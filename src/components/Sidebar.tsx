@@ -45,6 +45,7 @@ export function Sidebar({
         width: sidebarOpen ? 260 : 0,
         background: 'linear-gradient(180deg, var(--td-bg-color-container) 0%, var(--td-bg-color-page) 100%)',
         borderColor: 'var(--td-border-level-1-color)',
+        boxShadow: sidebarOpen ? '2px 0 12px rgba(0, 0, 0, 0.04)' : 'none',
       }}
     >
       {/* Logo */}

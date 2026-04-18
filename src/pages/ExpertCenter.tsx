@@ -56,8 +56,8 @@ function ExpertCard({ expert, onSelect }: ExpertCardProps) {
   return (
     <button
       onClick={() => onSelect(expert)}
-      className="group relative w-full text-left p-6 rounded-2xl border-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 overflow-hidden"
-      style={{ borderColor: `var(--${expert.color})` }}
+      className="card-gradient-border group relative w-full text-left p-6 rounded-2xl border-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all duration-300 hover:shadow-xl hover:-translate-y-2 overflow-hidden"
+      style={{ borderColor: 'var(--td-component-stroke)' }}
     >
       {/* 背景装饰 */}
       <div 

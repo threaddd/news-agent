@@ -47,9 +47,9 @@ export function Header({
 
   return (
     <header 
-      className="h-14 flex justify-between items-center px-4 flex-shrink-0 border-b backdrop-blur-xl"
+      className="h-14 flex justify-between items-center px-4 flex-shrink-0 border-b backdrop-blur-xl transition-all duration-300"
       style={{ 
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        backgroundColor: 'var(--td-bg-color-page-alpha, rgba(255, 255, 255, 0.8))',
         borderColor: 'var(--td-border-level-1-color)',
       }}
     >
