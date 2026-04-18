@@ -79,6 +79,7 @@ function AppContent() {
     currentSession,
     currentSessionId,
     selectedModel,
+    selectedProviderId,
     getAgent,
     addSession,
     updateSession,

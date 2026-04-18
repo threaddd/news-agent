@@ -15,6 +15,7 @@ interface UseChatOptions {
   currentSession: Session | undefined;
   currentSessionId: string | null;
   selectedModel: string;
+  selectedProviderId: string;
   getAgent: (id: string) => CustomAgent | undefined;
   addSession: (session: Session) => void;
   updateSession: (sessionId: string, updates: Partial<Session>) => void;
@@ -36,6 +37,7 @@ export function useChat(options: UseChatOptions) {
     currentSession,
     currentSessionId,
     selectedModel,
+    selectedProviderId,
     getAgent,
     updateSessionModel,
     setCurrentSessionId,
@@ -70,13 +72,12 @@ export function useChat(options: UseChatOptions) {
     // 如果没有当前会话，创建新会话
     if (!sessionId && newChatOptions) {
       const effectiveAgentId = initialAgentId || newChatOptions.agentId;
-      const provider = getCurrentProvider();
       
       const newSession: Session = {
         id: crypto.randomUUID(),
         title: messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : ''),
         model: selectedModel,
-        providerId: provider.providerId,
+        providerId: selectedProviderId,
         agentId: effectiveAgentId,
         cwd: newChatOptions.cwd || undefined,
         permissionMode: newChatOptions.permissionMode,
@@ -146,12 +147,15 @@ export function useChat(options: UseChatOptions) {
     const controller = new AbortController();
     setAbortController(controller);
 
+    // 获取当前使用的提供商 ID
+    const effectiveProviderId = currentSession?.providerId || selectedProviderId || 'groq';
+    
     try {
       await apiSendMessage({
         sessionId: sessionId!,
         message: messageContent,
         model: selectedModel,
-        providerId: currentSession?.providerId || getCurrentProvider().providerId,
+        providerId: effectiveProviderId,
         agentId: currentAgentId,
         getAgent,
         permissionMode: currentSession?.permissionMode || 'default',
