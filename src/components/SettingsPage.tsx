@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Button, Message, Input, Popup, Tag } from 'tdesign-react';
+import { Button, Input, Popup, Tag, MessagePlugin } from 'tdesign-react';
 import { 
   Plus, 
   Edit3, 
@@ -10,7 +10,7 @@ import {
   Lock, 
   Key,
   Save,
-  Refresh,
+  RefreshCw,
 } from 'lucide-react';
 import { CustomAgent, Agent, PermissionMode } from '../types';
 import { saveConfig, loadConfig, checkApiKeyConfigured } from '../utils/api';
@@ -248,7 +248,7 @@ export function SettingsPage({
           <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
             {loginStatus.checking ? (
               <div className="flex items-center gap-2 text-gray-500">
-                <Refresh className="w-4 h-4 animate-spin" />
+                <RefreshCw className="w-4 h-4 animate-spin" />
                 检查中...
               </div>
             ) : loginStatus.isLoggedIn ? (

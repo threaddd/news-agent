@@ -14,5 +14,12 @@ export default defineConfig({
         javascriptEnabled: true
       }
     }
+  },
+  build: {
+    target: 'es2020',
+    minify: 'esbuild'
+  },
+  esbuild: {
+    target: 'es2020'
   }
 });

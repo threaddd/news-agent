@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CustomAgent } from '../types';
-import { v4 as uuidv4 } from 'uuid';
 
 const STORAGE_KEY = 'customAgents';
 
@@ -43,7 +42,7 @@ export function useAgents() {
   const addAgent = useCallback((agent: Omit<CustomAgent, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newAgent: CustomAgent = {
       ...agent,
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
