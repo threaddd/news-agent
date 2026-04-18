@@ -1,6 +1,6 @@
 import { Button, Tooltip } from 'tdesign-react';
 import { AddIcon, DeleteIcon, SettingIcon } from 'tdesign-icons-react';
-import { Bot, LayoutGrid, Newspaper, Plus } from 'lucide-react';
+import { Bot, LayoutGrid, Newspaper, Plus, Users } from 'lucide-react';
 import { APP_CONFIG } from '../config';
 import { Session, Agent } from '../types';
 import { ICON_MAP } from '../utils/iconMap';
@@ -10,6 +10,7 @@ interface SidebarProps {
   currentSessionId: string | null;
   isSettingsPage: boolean;
   isToolsPage: boolean;
+  isExpertCenterPage: boolean;
   sidebarOpen: boolean;
   agents: Agent[];
   getAgent: (id: string) => Agent | undefined;
@@ -18,6 +19,7 @@ interface SidebarProps {
   onDeleteSession: (sessionId: string) => void;
   onOpenSettings: () => void;
   onOpenTools: () => void;
+  onOpenExperts: () => void;
 }
 
 export function Sidebar({
@@ -25,6 +27,7 @@ export function Sidebar({
   currentSessionId,
   isSettingsPage,
   isToolsPage,
+  isExpertCenterPage,
   sidebarOpen,
   agents,
   getAgent,
@@ -33,6 +36,7 @@ export function Sidebar({
   onDeleteSession,
   onOpenSettings,
   onOpenTools,
+  onOpenExperts,
 }: SidebarProps) {
   return (
     <aside 
@@ -71,6 +75,24 @@ export function Sidebar({
 
       {/* 快捷功能区 */}
       <div className="p-3 space-y-2">
+        {/* 专家中心 */}
+        <Button 
+          icon={<Users size={16} />}
+          onClick={onOpenExperts}
+          block
+          variant={isExpertCenterPage ? 'filled' : 'outline'}
+          className="justify-start font-medium transition-all duration-200 hover:scale-[1.02]"
+          style={isExpertCenterPage ? {
+            background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+            border: 'none',
+          } : {
+            background: 'var(--td-bg-color-component)',
+            borderColor: 'var(--td-border-level-1-color)',
+          }}
+        >
+          <span style={isExpertCenterPage ? { color: 'white' } : {}}>专家中心</span>
+        </Button>
+
         {/* 新闻工作台 */}
         <Button 
           icon={<LayoutGrid size={16} />}

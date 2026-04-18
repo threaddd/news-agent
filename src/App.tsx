@@ -15,6 +15,9 @@ import { SettingsPage } from './components/SettingsPage';
 import { ChatPage } from './pages/ChatPage';
 import { NewsToolsPage } from './pages/NewsToolsPage';
 import { ImageGenPage } from './pages/ImageGenPage';
+import { ExpertCenter } from './pages/ExpertCenter';
+import { ExpertChat } from './pages/ExpertChat';
+import { Expert } from './data/experts';
 
 function App() {
   return (
@@ -22,6 +25,8 @@ function App() {
       <Route path="/" element={<AppContent />} />
       <Route path="/tools" element={<AppContent />} />
       <Route path="/image-gen" element={<AppContent />} />
+      <Route path="/experts" element={<AppContent />} />
+      <Route path="/expert-chat" element={<AppContent />} />
       <Route path="/chat/:sessionId" element={<AppContent />} />
       <Route path="/settings" element={<AppContent />} />
     </Routes>
@@ -35,6 +40,11 @@ function AppContent() {
   const isSettingsPage = location.pathname === '/settings';
   const isToolsPage = location.pathname === '/tools';
   const isImageGenPage = location.pathname === '/image-gen';
+  const isExpertCenterPage = location.pathname === '/experts';
+  const isExpertChatPage = location.pathname === '/expert-chat';
+
+  // 专家中心相关状态
+  const [selectedExpert, setSelectedExpert] = useState<Expert | null>(null);
 
   // Hooks
   const { theme, toggleTheme } = useTheme();
@@ -158,6 +168,18 @@ function AppContent() {
     navigate('/image-gen');
   }, [navigate]);
 
+  // 打开专家中心
+  const handleOpenExperts = useCallback(() => {
+    setSelectedExpert(null);
+    navigate('/experts');
+  }, [navigate]);
+
+  // 选择专家
+  const handleSelectExpert = useCallback((expert: Expert) => {
+    setSelectedExpert(expert);
+    navigate('/expert-chat');
+  }, [navigate]);
+
   return (
     <div 
       className="flex h-screen w-screen"
@@ -169,6 +191,7 @@ function AppContent() {
         currentSessionId={currentSessionId}
         isSettingsPage={isSettingsPage}
         isToolsPage={isToolsPage}
+        isExpertCenterPage={isExpertCenterPage}
         sidebarOpen={sidebarOpen}
         agents={agents}
         getAgent={getAgent}
@@ -177,6 +200,7 @@ function AppContent() {
         onDeleteSession={handleDeleteSession}
         onOpenSettings={handleOpenSettings}
         onOpenTools={handleOpenTools}
+        onOpenExperts={handleOpenExperts}
       />
 
       {/* 主内容区 */}
@@ -210,6 +234,10 @@ function AppContent() {
           <NewsToolsPage onSelectTool={handleSelectTool} onOpenImageGen={handleOpenImageGen} />
         ) : isImageGenPage ? (
           <ImageGenPage />
+        ) : isExpertChatPage && selectedExpert ? (
+          <ExpertChat expert={selectedExpert} />
+        ) : isExpertCenterPage ? (
+          <ExpertCenter onSelectExpert={handleSelectExpert} onBack={() => navigate('/')} />
         ) : (
           <ChatPage
             currentSession={currentSession}

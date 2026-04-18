@@ -17,6 +17,7 @@ interface UseChatOptions {
   updateSessionModel: (sessionId: string, modelId: string) => void;
   setCurrentSessionId: (id: string | null) => void;
   setSessions: React.Dispatch<React.SetStateAction<Session[]>>;
+  initialAgentId?: string; // 初始化新会话时使用的 Agent ID
 }
 
 interface NewChatOptions {
@@ -34,6 +35,7 @@ export function useChat(options: UseChatOptions) {
     updateSessionModel,
     setCurrentSessionId,
     setSessions,
+    initialAgentId,
   } = options;
 
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +64,9 @@ export function useChat(options: UseChatOptions) {
     
     // 如果没有当前会话，使用新对话页面的选项创建新会话
     if (!sessionId && newChatOptions) {
-      const selectedAgent = getAgent(newChatOptions.agentId);
+      // 如果有 initialAgentId，优先使用；否则使用 newChatOptions.agentId
+      const effectiveAgentId = initialAgentId || newChatOptions.agentId;
+      const selectedAgent = getAgent(effectiveAgentId);
       const agentPermissionMode = selectedAgent?.permissionMode || 'default';
       const finalPermissionMode = newChatOptions.permissionMode !== 'default' 
         ? newChatOptions.permissionMode 
@@ -72,7 +76,7 @@ export function useChat(options: UseChatOptions) {
         id: uuidv4(),
         title: messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : ''),
         model: selectedModel,
-        agentId: newChatOptions.agentId,
+        agentId: effectiveAgentId,
         cwd: newChatOptions.cwd || undefined,
         permissionMode: finalPermissionMode,
         createdAt: new Date(),
