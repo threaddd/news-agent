@@ -1,11 +1,17 @@
 /**
- * API 调用层 - 前端直接调用 CodeBuddy REST API
- * 适用于部署到纯静态托管平台（如 Vercel）
+ * API 调用层
+ * 
+ * 部署说明:
+ * - 本地开发: 直接调用 CodeBuddy API
+ * - Vercel 部署: 通过 /api/proxy 代理调用
  */
 
 import { Message, ToolCall, ContentBlock, Session, CustomAgent } from '../types';
 
-// 获取 API Key
+// 判断是否为 Vercel 部署环境
+const isVercel = import.meta.env.PROD;
+
+// 获取 API Key (仅本地开发需要)
 const getApiKey = (): string => {
   const apiKey = import.meta.env.VITE_CODEBUDDY_API_KEY || localStorage.getItem('codebuddy_api_key');
   if (!apiKey) {
@@ -16,7 +22,11 @@ const getApiKey = (): string => {
 
 // 获取 API 地址
 const getApiBaseUrl = (): string => {
-  return import.meta.env.VITE_API_BASE_URL || 'https://api.codebuddy.ai';
+  // Vercel 环境使用相对路径代理
+  if (isVercel) {
+    return '/api';
+  }
+  return import.meta.env.VITE_API_BASE_URL || 'https://api.codebuddy.ai/v1';
 };
 
 // ============ 会话管理 ============
@@ -213,7 +223,19 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `API 请求失败: ${response.status}`);
+      const errorMessage = errorData.message || `API 请求失败: ${response.status}`;
+      
+      // 提供更详细的错误信息
+      if (response.status === 401) {
+        throw new Error('API Key 无效或已过期，请在设置中更新');
+      } else if (response.status === 403) {
+        throw new Error('没有权限访问 API，请检查 API Key 权限');
+      } else if (response.status === 404) {
+        throw new Error('API 端点不存在，请检查 CodeBuddy 版本或联系支持');
+      } else if (response.status >= 500) {
+        throw new Error('CodeBuddy 服务器错误，请稍后重试');
+      }
+      throw new Error(errorMessage);
     }
 
     // 处理流式响应
@@ -335,9 +357,30 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
     });
     saveSessionsToStorage(updatedSessions);
 
-  } catch (error) {
-    onError?.(error as Error);
-    throw error;
+  } catch (error: any) {
+    // 处理常见的 fetch 错误
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      const enhancedError = new Error(
+        '无法连接到 CodeBuddy 服务器。请检查：\n' +
+        '1. 网络连接是否正常\n' +
+        '2. API 地址是否正确\n' +
+        '3. 是否存在 CORS 问题\n\n' +
+        '如果部署在 Vercel 等平台，可能需要配置服务端代理来调用 CodeBuddy API。'
+      );
+      onError?.(enhancedError);
+      throw enhancedError;
+    }
+    
+    // 如果错误已经是增强的错误，直接使用
+    if (error.message.includes('API Key') || error.message.includes('API')) {
+      onError?.(error);
+      throw error;
+    }
+    
+    // 其他错误
+    const genericError = new Error(`请求失败: ${error.message || '未知错误'}`);
+    onError?.(genericError);
+    throw genericError;
   }
 }
 
