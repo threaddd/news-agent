@@ -70,11 +70,13 @@ export function useChat(options: UseChatOptions) {
     // 如果没有当前会话，创建新会话
     if (!sessionId && newChatOptions) {
       const effectiveAgentId = initialAgentId || newChatOptions.agentId;
+      const provider = getCurrentProvider();
       
       const newSession: Session = {
         id: crypto.randomUUID(),
         title: messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : ''),
         model: selectedModel,
+        providerId: provider.providerId,
         agentId: effectiveAgentId,
         cwd: newChatOptions.cwd || undefined,
         permissionMode: newChatOptions.permissionMode,

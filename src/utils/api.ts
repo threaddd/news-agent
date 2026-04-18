@@ -355,10 +355,13 @@ async function sendGeminiMessage(params: {
     const systemInstruction = messages.find(m => m.role === 'system')?.content;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
         body: JSON.stringify({
           contents,
           systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,

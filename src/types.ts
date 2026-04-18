@@ -41,10 +41,12 @@ export interface Session {
   id: string;
   title: string;
   model: string;
+  providerId?: string;
   agentId?: string;
   cwd?: string;
   permissionMode?: PermissionMode;
   createdAt: Date;
+  updatedAt: Date;
   messages: Message[];
 }
 
