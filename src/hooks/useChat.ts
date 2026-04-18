@@ -4,6 +4,7 @@ import {
   sendMessage as apiSendMessage,
   createSessionInStorage,
   saveSessionsToStorage,
+  getCurrentProvider,
 } from '../utils/api';
 
 const STORAGE_KEYS = {
@@ -148,6 +149,7 @@ export function useChat(options: UseChatOptions) {
         sessionId: sessionId!,
         message: messageContent,
         model: selectedModel,
+        providerId: currentSession?.providerId || getCurrentProvider().providerId,
         agentId: currentAgentId,
         getAgent,
         permissionMode: currentSession?.permissionMode || 'default',

@@ -1,36 +1,34 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Button, Input, Popup, Tag, MessagePlugin } from 'tdesign-react';
-import { 
-  Plus, 
-  Edit3, 
-  TrashIcon, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
-  Lock, 
+import {
+  Plus,
+  Edit3,
+  TrashIcon,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Lock,
   Key,
   Save,
   RefreshCw,
+  ChevronDown,
 } from 'lucide-react';
 import { CustomAgent, Agent, PermissionMode } from '../types';
-import { saveConfig, loadConfig, checkApiKeyConfigured } from '../utils/api';
+import {
+  AI_PROVIDERS,
+  getProvider,
+  getCurrentProvider,
+  setCurrentProvider,
+  getApiKey,
+  setApiKey,
+  checkAnyApiKeyConfigured,
+} from '../utils/api';
 
 interface SettingsPageProps {
   agents: Agent[];
   onAdd: (agent: Omit<CustomAgent, 'id'>) => void;
   onUpdate: (id: string, agent: Partial<CustomAgent>) => void;
   onDelete: (id: string) => void;
-}
-
-interface LoginStatus {
-  isLoggedIn: boolean;
-  checking: boolean;
-  method?: 'api_key' | 'auth_token';
-  envConfigured?: boolean;
-  cliConfigured?: boolean;
-  error?: string;
-  apiKey?: string;
-  envVars?: Record<string, string>;
 }
 
 const ICONS = ['Bot', 'Code', 'FileText', 'Globe', 'Lightbulb', 'MessageCircle', 'User', 'Sparkles', 'Star', 'Zap'];
@@ -47,38 +45,38 @@ const PRESET_TEMPLATES = [
   {
     name: '代码助手',
     description: '专注于编程和代码相关任务',
-    systemPrompt: '你是一个专业的编程助手。你擅长编写、审查和解释代码。请提供清晰、高效且符合最佳实践的代码解决方案。在解释时，请考虑代码的可读性、性能和可维护性。',
+    systemPrompt: '你是一个专业的编程助手。你擅长编写、审查和解释代码。请提供清晰、高效且符合最佳实践的代码解决方案。',
     icon: 'Code',
     color: '#0594fa',
   },
   {
     name: '写作助手',
     description: '帮助撰写和优化各类文档',
-    systemPrompt: '你是一个专业的写作助手。你擅长撰写、编辑和优化各类文档，包括文章、报告、邮件等。请帮助用户提升文字表达的清晰度、逻辑性和吸引力。',
+    systemPrompt: '你是一个专业的写作助手。你擅长撰写、编辑和优化各类文档，包括文章、报告、邮件等。',
     icon: 'FileText',
     color: '#00a870',
   },
   {
     name: '翻译助手',
     description: '提供高质量的多语言翻译',
-    systemPrompt: '你是一个专业的翻译助手。你精通多种语言，能够提供准确、自然、符合语境的翻译。请在翻译时保持原文的语气和风格，同时确保目标语言的地道表达。',
+    systemPrompt: '你是一个专业的翻译助手。你精通多种语言，能够提供准确自然、符合语境的翻译。',
     icon: 'Globe',
     color: '#ed7b2f',
   },
   {
     name: '创意助手',
     description: '激发灵感，提供创意建议',
-    systemPrompt: '你是一个富有创意的助手。你善于头脑风暴、提供创新想法和独特视角。请帮助用户突破思维定式，探索新的可能性，激发创造力。',
+    systemPrompt: '你是一个富有创意的助手。你善于头脑风暴、提供创新想法和独特视角。',
     icon: 'Lightbulb',
     color: '#a25eb5',
   },
 ];
 
-export function SettingsPage({ 
-  agents, 
-  onAdd, 
-  onUpdate, 
-  onDelete 
+export function SettingsPage({
+  agents,
+  onAdd,
+  onUpdate,
+  onDelete
 }: SettingsPageProps) {
   const [editingAgent, setEditingAgent] = useState<CustomAgent | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -90,71 +88,56 @@ export function SettingsPage({
     color: '#0052d9',
     permissionMode: 'default' as PermissionMode,
   });
-  
-  // 登录状态
-  const [loginStatus, setLoginStatus] = useState<LoginStatus>({
-    isLoggedIn: false,
-    checking: true,
-  });
-  
-  // 环境变量配置
-  const [showEnvConfig, setShowEnvConfig] = useState(false);
-  const [envConfig, setEnvConfig] = useState({
-    apiKey: '',
-  });
-  const [savingEnv, setSavingEnv] = useState(false);
 
-  // 检查登录状态
-  const checkLoginStatus = useCallback(async () => {
-    setLoginStatus(prev => ({ ...prev, checking: true, error: undefined }));
-    
-    try {
-      const isConfigured = checkApiKeyConfigured();
-      const storedConfig = loadConfig();
-      
-      setLoginStatus({
-        isLoggedIn: isConfigured || !!storedConfig.apiKey,
-        checking: false,
-        method: isConfigured || storedConfig.apiKey ? 'api_key' : undefined,
-        envConfigured: isConfigured || !!storedConfig.apiKey,
-        apiKey: isConfigured ? '***' : (storedConfig.apiKey ? '***' : undefined),
-      });
-    } catch (error: any) {
-      setLoginStatus({
-        isLoggedIn: false,
-        checking: false,
-        error: error?.message || '检查登录状态失败',
-      });
-    }
+  // AI 提供商状态
+  const [currentProvider, setProviderState] = useState(getCurrentProvider);
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [savingApi, setSavingApi] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(checkAnyApiKeyConfigured);
+
+  // 检查配置状态
+  useEffect(() => {
+    const provider = getCurrentProvider();
+    setProviderState(provider);
+    setIsConfigured(checkAnyApiKeyConfigured());
   }, []);
-  
-  // 保存 API Key 配置
-  const saveEnvConfig = async () => {
-    if (!envConfig.apiKey.trim()) {
+
+  // 选择提供商
+  const handleSelectProvider = (providerId: string) => {
+    const provider = getProvider(providerId);
+    if (!provider) return;
+
+    setSelectedProviderId(providerId);
+    setApiKeyInput(getApiKey(providerId) || '');
+  };
+
+  // 选择模型
+  const handleSelectModel = (providerId: string, modelId: string) => {
+    setCurrentProvider(providerId, modelId);
+    setProviderState({ providerId, modelId });
+  };
+
+  // 保存 API Key
+  const handleSaveApiKey = async () => {
+    if (!selectedProviderId || !apiKeyInput.trim()) {
       MessagePlugin.warning('请输入 API Key');
       return;
     }
-    
-    setSavingEnv(true);
+
+    setSavingApi(true);
     try {
-      saveConfig({ apiKey: envConfig.apiKey.trim() });
-      localStorage.setItem('openai_api_key', envConfig.apiKey.trim());
-      
-      MessagePlugin.success('API Key 保存成功');
-      setShowEnvConfig(false);
-      setEnvConfig({ apiKey: '' });
-      checkLoginStatus();
-    } catch (error: any) {
-      MessagePlugin.error(error?.message || '保存失败');
+      setApiKey(selectedProviderId, apiKeyInput.trim());
+      MessagePlugin.success(`${getProvider(selectedProviderId)?.name} API Key 保存成功`);
+      setShowApiConfig(false);
+      setIsConfigured(true);
+    } catch (error) {
+      MessagePlugin.error('保存失败');
     } finally {
-      setSavingEnv(false);
+      setSavingApi(false);
     }
   };
-
-  // 初始化时检查登录状态
-  useEffect(() => {
-    checkLoginStatus();
-  }, [checkLoginStatus]);
 
   const resetForm = () => {
     setFormData({
@@ -187,12 +170,12 @@ export function SettingsPage({
       MessagePlugin.warning('请输入 Agent 名称');
       return;
     }
-    
+
     if (!formData.systemPrompt.trim()) {
       MessagePlugin.warning('请输入系统提示词');
       return;
     }
-    
+
     if (editingAgent) {
       onUpdate(editingAgent.id, {
         name: formData.name,
@@ -214,7 +197,7 @@ export function SettingsPage({
       });
       MessagePlugin.success('创建成功');
     }
-    
+
     resetForm();
   };
 
@@ -235,29 +218,29 @@ export function SettingsPage({
     setIsCreating(true);
   };
 
+  const currentProviderInfo = getProvider(currentProvider.providerId);
+
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* API 配置 */}
+        {/* AI 提供商配置 */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Key className="w-5 h-5" />
-            API 配置
+            AI 提供商配置
           </h3>
-          
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-            {loginStatus.checking ? (
-              <div className="flex items-center gap-2 text-gray-500">
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                检查中...
-              </div>
-            ) : loginStatus.isLoggedIn ? (
+
+          {/* 当前状态 */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 mb-4">
+            {isConfigured ? (
               <>
                 <CheckCircle className="w-5 h-5 text-green-500" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">已配置 API Key</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {currentProviderInfo?.name || '已配置'}
+                  </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {loginStatus.method === 'api_key' ? '使用环境变量/本地存储的 API Key' : '已配置'}
+                    当前模型: {currentProviderInfo?.models.find(m => m.id === currentProvider.modelId)?.name || currentProvider.modelId}
                   </p>
                 </div>
               </>
@@ -266,48 +249,113 @@ export function SettingsPage({
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">未配置 API Key</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">请配置 OpenAI API Key 以使用 AI 功能</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">请选择一个 AI 提供商并配置 API Key</p>
                 </div>
               </>
             )}
-            
-            <Button 
-              size="small" 
+
+            <Button
+              size="small"
               variant="outline"
-              onClick={() => setShowEnvConfig(!showEnvConfig)}
+              onClick={() => {
+                setSelectedProviderId(currentProvider.providerId);
+                setApiKeyInput(getApiKey(currentProvider.providerId) || '');
+                setShowApiConfig(!showApiConfig);
+              }}
             >
-              {showEnvConfig ? '取消' : loginStatus.isLoggedIn ? '修改' : '配置'}
+              {showApiConfig ? '收起' : '配置'}
             </Button>
           </div>
-          
-          {showEnvConfig && (
-            <div className="mt-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    OpenAI API Key
-                  </label>
-                  <Input
-                    value={envConfig.apiKey}
-                    onChange={(value) => setEnvConfig({ apiKey: value as string })}
-                    placeholder="ck_xxxxxxxxxxxxxxxxxxxx"
-                    type="password"
-                    size="large"
-                    className="!bg-white dark:!bg-gray-800"
-                  />
-                  <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    从 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenAI</a> 获取 API Key
-                  </p>
-                </div>
-                
-                <Button 
-                  theme="primary"
-                  icon={<Save className="w-4 h-4" />}
-                  loading={savingEnv}
-                  onClick={saveEnvConfig}
+
+          {/* 提供商列表 */}
+          <div className="space-y-4">
+            {AI_PROVIDERS.map((provider) => {
+              const hasKey = !!getApiKey(provider.id);
+              const isSelected = currentProvider.providerId === provider.id;
+
+              return (
+                <div
+                  key={provider.id}
+                  className={`p-4 rounded-xl border transition-all ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
                 >
-                  保存配置
-                </Button>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${hasKey ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <h4 className="font-medium text-gray-900 dark:text-white">{provider.name}</h4>
+                      {provider.id === 'groq' && (
+                        <Tag size="small" theme="success" variant="light">免费</Tag>
+                      )}
+                    </div>
+                    {!hasKey && (
+                      <Button
+                        size="small"
+                        variant="outline"
+                        onClick={() => handleSelectProvider(provider.id)}
+                      >
+                        配置
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* 模型选择 */}
+                  <div className="flex flex-wrap gap-2">
+                    {provider.models.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => hasKey ? handleSelectModel(provider.id, model.id) : handleSelectProvider(provider.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          currentProvider.modelId === model.id && isSelected
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {model.name}
+                        {model.isFree && <span className="ml-1 text-green-600">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* API Key 配置面板 */}
+          {showApiConfig && selectedProviderId && (
+            <div className="mt-4 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                配置 {getProvider(selectedProviderId)?.name} API Key
+              </h4>
+
+              <div className="space-y-3">
+                <Input
+                  value={apiKeyInput}
+                  onChange={(value) => setApiKeyInput(value as string)}
+                  placeholder="输入 API Key"
+                  type="password"
+                  size="large"
+                  className="!bg-white dark:!bg-gray-800"
+                />
+
+                <div className="flex gap-2">
+                  <Button
+                    theme="primary"
+                    icon={<Save className="w-4 h-4" />}
+                    loading={savingApi}
+                    onClick={handleSaveApiKey}
+                  >
+                    保存
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowApiConfig(false)}
+                  >
+                    取消
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -320,7 +368,7 @@ export function SettingsPage({
               <Lock className="w-5 h-5" />
               Agent 管理
             </h3>
-            <Button 
+            <Button
               theme="primary"
               icon={<Plus className="w-4 h-4" />}
               onClick={() => setIsCreating(true)}
@@ -338,7 +386,7 @@ export function SettingsPage({
                 </h4>
                 <Button size="small" variant="text" onClick={resetForm}>取消</Button>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">名称</label>
@@ -350,7 +398,7 @@ export function SettingsPage({
                     className="!bg-white dark:!bg-gray-800"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">描述</label>
                   <Input
@@ -361,7 +409,7 @@ export function SettingsPage({
                     className="!bg-white dark:!bg-gray-800"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">系统提示词</label>
                   <textarea
@@ -372,7 +420,7 @@ export function SettingsPage({
                     className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">权限模式</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -393,7 +441,7 @@ export function SettingsPage({
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="flex gap-3">
                   <Button theme="primary" onClick={handleSave}>
                     {editingAgent ? '保存修改' : '创建 Agent'}
@@ -415,7 +463,7 @@ export function SettingsPage({
                     onClick={() => handleApplyTemplate(template)}
                     className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all text-left group"
                   >
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-lg mb-2 flex items-center justify-center text-white text-sm"
                       style={{ backgroundColor: template.color }}
                     >
@@ -436,17 +484,17 @@ export function SettingsPage({
           {/* Agent 列表 */}
           <div className="space-y-3">
             {agents.map((agent) => (
-              <div 
+              <div
                 key={agent.id}
                 className="flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
               >
-                <div 
+                <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg"
                   style={{ backgroundColor: agent.color || '#0052d9' }}
                 >
                   {agent.name[0]}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-gray-900 dark:text-white truncate">
@@ -460,20 +508,20 @@ export function SettingsPage({
                     {agent.description || agent.systemPrompt?.slice(0, 50) + '...'}
                   </p>
                 </div>
-                
+
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   {agent.id !== 'default' && (
                     <>
-                      <Button 
-                        size="small" 
+                      <Button
+                        size="small"
                         variant="outline"
                         icon={<Edit3 className="w-4 h-4" />}
                         onClick={() => handleEdit(agent)}
                       >
                         编辑
                       </Button>
-                      <Button 
-                        size="small" 
+                      <Button
+                        size="small"
                         variant="outline"
                         theme="danger"
                         icon={<TrashIcon className="w-4 h-4" />}

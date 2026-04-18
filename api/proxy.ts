@@ -1,5 +1,5 @@
 /**
- * Vercel Serverless Function - OpenAI 兼容 API 代理
+ * Vercel Serverless Function - 多 AI 提供商代理
  */
 
 function jsonResponse(data: any, status = 200) {
@@ -12,27 +12,56 @@ function jsonResponse(data: any, status = 200) {
   });
 }
 
+const PROVIDERS: Record<string, { baseUrl: string; envKey: string }> = {
+  groq: {
+    baseUrl: 'https://api.groq.com/openai/v1',
+    envKey: 'GROQ_API_KEY',
+  },
+  openrouter: {
+    baseUrl: 'https://openrouter.ai/api/v1',
+    envKey: 'OPENROUTER_API_KEY',
+  },
+  together: {
+    baseUrl: 'https://api.together.xyz/v1',
+    envKey: 'TOGETHER_API_KEY',
+  },
+  fireworks: {
+    baseUrl: 'https://api.fireworks.ai/inference/v1',
+    envKey: 'FIREWORKS_API_KEY',
+  },
+  deepseek: {
+    baseUrl: 'https://api.deepseek.com/v1',
+    envKey: 'DEEPSEEK_API_KEY',
+  },
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { apiKey, baseUrl, model, messages, stream } = body;
+    const { provider, model, messages, stream } = body;
 
-    // 获取 API 配置
-    const key = apiKey || process.env.OPENAI_API_KEY;
-    const base = baseUrl || process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1';
-
-    if (!key) {
-      return jsonResponse({ error: 'API Key 未配置' }, 401);
+    if (!provider || !model || !messages) {
+      return jsonResponse({ error: '缺少必要参数' }, 400);
     }
 
-    const response = await fetch(`${base}/chat/completions`, {
+    const providerConfig = PROVIDERS[provider];
+    if (!providerConfig) {
+      return jsonResponse({ error: `未知的提供商: ${provider}` }, 400);
+    }
+
+    const apiKey = process.env[providerConfig.envKey];
+    if (!apiKey) {
+      return jsonResponse({ error: `${provider} API Key 未配置` }, 401);
+    }
+
+    const response = await fetch(`${providerConfig.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: model || 'gpt-4o',
+        model,
         messages,
         stream: stream ?? true,
       }),

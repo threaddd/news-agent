@@ -1,37 +1,121 @@
 /**
- * API 调用层 - OpenAI 兼容 API
- * 支持 OpenAI、Claude (通过兼容层)、以及任何 OpenAI 格式的 API
+ * API 调用层 - 支持多种 AI 服务提供商
+ * 
+ * 支持的免费/低成本 API：
+ * - Groq (免费高速)
+ * - OpenRouter (多种模型)
+ * - Together AI (有免费额度)
+ * - Fireworks AI (有免费额度)
+ * - Gemini (Google)
  */
 
 import { Message, ToolCall, ContentBlock, Session, CustomAgent } from '../types';
 
-// 判断是否为 Vercel 部署环境
-const isVercel = import.meta.env.PROD;
+// ============ 配置 ============
 
-// 获取 API 配置
-const getApiConfig = (): { apiKey: string; baseUrl: string; model: string } => {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('openai_api_key');
-  const baseUrl = import.meta.env.VITE_OPENAI_API_BASE_URL || 'https://api.openai.com/v1';
-  const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o';
+interface AIProvider {
+  id: string;
+  name: string;
+  baseUrl: string;
+  models: AIModel[];
+}
 
-  if (!apiKey) {
-    throw new Error('未配置 API Key，请在设置中配置 OpenAI API Key');
-  }
+interface AIModel {
+  id: string;
+  name: string;
+  description?: string;
+  isFree?: boolean;
+}
 
-  return { apiKey, baseUrl, model };
-};
+export const AI_PROVIDERS: AIProvider[] = [
+  {
+    id: 'groq',
+    name: 'Groq (免费)',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    models: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B', description: '高性能', isFree: true },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B', description: '快速响应', isFree: true },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', description: '混合专家', isFree: true },
+      { id: 'gemma2-9b-it', name: 'Gemma 2 9B', description: 'Google轻量', isFree: true },
+    ],
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    models: [
+      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', description: 'Anthropic高效' },
+      { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', description: 'Google多模态' },
+      { id: 'meta-llama/llama-3-8b-instruct', name: 'Llama 3 8B', description: '开源旗舰' },
+      { id: 'mistralai/mistral-7b-instruct', name: 'Mistral 7B', description: '欧洲最强' },
+      { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', description: 'OpenAI轻量' },
+      { id: 'deepseek-ai/deepseek-v3', name: 'DeepSeek V3', description: '中国开源' },
+      { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B', description: '阿里开源' },
+    ],
+  },
+  {
+    id: 'together',
+    name: 'Together AI',
+    baseUrl: 'https://api.together.xyz/v1',
+    models: [
+      { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B', description: '开源旗舰' },
+      { id: 'Qwen/Qwen2-72B-Instruct', name: 'Qwen 2 72B', description: '阿里开源' },
+      { id: 'deepseek-ai/DeepSeek-V3', name: 'DeepSeek V3', description: '中国最强' },
+    ],
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini (免费)',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    models: [
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: '快速多模态', isFree: true },
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash', description: '最新模型', isFree: true },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: '最强多模态' },
+    ],
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    models: [
+      { id: 'deepseek-chat', name: 'DeepSeek V3', description: '中国最强' },
+      { id: 'deepseek-coder', name: 'DeepSeek Coder', description: '编程专用' },
+    ],
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama (本地)',
+    baseUrl: 'http://localhost:11434/v1',
+    models: [
+      { id: 'llama3.2', name: 'Llama 3.2', description: '本地运行' },
+      { id: 'codellama', name: 'Code Llama', description: '编程专用' },
+      { id: 'mistral', name: 'Mistral', description: '欧洲最强' },
+      { id: 'qwen2.5', name: 'Qwen 2.5', description: '阿里开源' },
+    ],
+  },
+];
 
-// 获取 API 地址
-const getApiBaseUrl = (): string => {
-  if (isVercel) {
-    return '/api';
-  }
-  return import.meta.env.VITE_OPENAI_API_BASE_URL || 'https://api.openai.com/v1';
-};
+// 获取所有模型
+export function getAllModels(): AIModel[] {
+  return AI_PROVIDERS.flatMap(p => p.models);
+}
 
-// ============ 会话管理 ============
+// 获取免费模型
+export function getFreeModels(): AIModel[] {
+  return AI_PROVIDERS.flatMap(p => p.models.filter(m => m.isFree));
+}
+
+// 获取提供商
+export function getProvider(providerId: string): AIProvider | undefined {
+  return AI_PROVIDERS.find(p => p.id === providerId);
+}
+
+// ============ 存储 ============
 
 const SESSIONS_KEY = 'news_agent_sessions';
+const CONFIG_KEY = 'news_agent_config';
+const PROVIDER_KEY = 'ai_provider';
+const API_KEY_PREFIX = 'ai_api_key_';
 
 export function loadSessionsFromStorage(): Session[] {
   try {
@@ -80,7 +164,6 @@ export function createSessionInStorage(title: string, model: string, agentId: st
     updatedAt: new Date(),
     messages: [],
   };
-
   const sessions = loadSessionsFromStorage();
   saveSessionsToStorage([session, ...sessions]);
   return session;
@@ -98,36 +181,40 @@ export function getSessionFromStorage(sessionId: string): Session | undefined {
 
 // ============ 模型列表 ============
 
-const MODELS_KEY = 'news_agent_models';
-
-export async function fetchModels(): Promise<Array<{ modelId: string; name: string; description?: string }>> {
-  const models = [
-    { modelId: 'gpt-4o', name: 'GPT-4o', description: 'OpenAI 最新多模态模型' },
-    { modelId: 'gpt-4o-mini', name: 'GPT-4o Mini', description: '轻量级 GPT-4o' },
-    { modelId: 'gpt-4-turbo', name: 'GPT-4 Turbo', description: '快速 GPT-4' },
-    { modelId: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Anthropic 高效模型' },
-    { modelId: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', description: '快速轻量' },
-  ];
-
-  try {
-    localStorage.setItem(MODELS_KEY, JSON.stringify(models));
-  } catch (e) {
-    console.error('保存模型列表失败:', e);
-  }
-
-  return models;
+export async function fetchModels(): Promise<AIModel[]> {
+  return getAllModels();
 }
 
-export function getCachedModels(): Array<{ modelId: string; name: string; description?: string }> {
-  try {
-    const data = localStorage.getItem(MODELS_KEY);
-    if (data) {
-      return JSON.parse(data);
-    }
-  } catch (e) {
-    console.error('加载模型列表失败:', e);
+export function getCachedModels(): AIModel[] {
+  return getAllModels();
+}
+
+// ============ AI 提供商配置 ============
+
+export function getCurrentProvider(): { providerId: string; modelId: string } {
+  const stored = localStorage.getItem(PROVIDER_KEY);
+  if (stored) {
+    return JSON.parse(stored);
   }
-  return fetchModels() as any;
+  return { providerId: 'groq', modelId: 'llama-3.3-70b-versatile' };
+}
+
+export function setCurrentProvider(providerId: string, modelId: string): void {
+  localStorage.setItem(PROVIDER_KEY, JSON.stringify({ providerId, modelId }));
+}
+
+export function getApiKey(providerId: string): string | undefined {
+  const envKey = import.meta.env[`VITE_${providerId.toUpperCase()}_API_KEY`];
+  if (envKey) return envKey;
+  return localStorage.getItem(`${API_KEY_PREFIX}${providerId}`);
+}
+
+export function setApiKey(providerId: string, key: string): void {
+  localStorage.setItem(`${API_KEY_PREFIX}${providerId}`, key);
+}
+
+export function checkAnyApiKeyConfigured(): boolean {
+  return AI_PROVIDERS.some(p => !!getApiKey(p.id));
 }
 
 // ============ 聊天功能 ============
@@ -136,9 +223,8 @@ interface SendMessageOptions {
   sessionId: string;
   message: string;
   model: string;
+  providerId: string;
   systemPrompt?: string;
-  cwd?: string;
-  permissionMode?: 'default' | 'auto' | 'manual';
   agentId: string;
   getAgent: (id: string) => CustomAgent | undefined;
   onInit?: (data: { sessionId: string; assistantMessageId: string }) => void;
@@ -151,212 +237,199 @@ interface SendMessageOptions {
 }
 
 export async function sendMessage(options: SendMessageOptions): Promise<void> {
-  const {
-    sessionId,
-    message,
-    model,
-    systemPrompt,
-    permissionMode,
-    agentId,
-    getAgent,
-    onInit,
-    onText,
-    onTool,
-    onToolResult,
-    onDone,
-    onError,
-    signal,
-  } = options;
+  const { sessionId, message, model, providerId, systemPrompt, agentId, getAgent, onInit, onText, onToolResult, onDone, onError, signal } = options;
 
-  const apiKey = getApiKey();
-  const apiBaseUrl = getApiBaseUrl();
+  const apiKey = getApiKey(providerId);
+  if (!apiKey) {
+    const error = new Error(`请先配置 ${getProvider(providerId)?.name || providerId} 的 API Key`);
+    onError?.(error);
+    throw error;
+  }
+
+  const provider = getProvider(providerId);
+  if (!provider) {
+    const error = new Error(`未知的 AI 提供商: ${providerId}`);
+    onError?.(error);
+    throw error;
+  }
+
   const assistantMessageId = crypto.randomUUID();
-
   onInit?.({ sessionId, assistantMessageId });
 
   const agent = getAgent(agentId);
   const finalSystemPrompt = systemPrompt || agent?.systemPrompt || '';
 
   try {
-    // 构建消息历史
     const messages: Array<{ role: string; content: string }> = [];
-    if (finalSystemPrompt) {
-      messages.push({ role: 'system', content: finalSystemPrompt });
-    }
+    if (finalSystemPrompt) messages.push({ role: 'system', content: finalSystemPrompt });
 
-    // 从 localStorage 加载历史消息
     const sessions = loadSessionsFromStorage();
     const currentSession = sessions.find(s => s.id === sessionId);
     if (currentSession) {
-      currentSession.messages.forEach(msg => {
-        messages.push({
-          role: msg.role,
-          content: msg.content,
-        });
-      });
+      currentSession.messages.forEach(msg => messages.push({ role: msg.role, content: msg.content }));
     }
     messages.push({ role: 'user', content: message });
 
     const startTime = Date.now();
 
-    const response = await fetch(`${apiBaseUrl}/chat/completions`, {
+    // Gemini 特殊处理
+    if (providerId === 'gemini') {
+      await sendGeminiMessage({ apiKey, model, messages, onText, signal, onDone, onError });
+      return;
+    }
+
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        messages,
-        stream: true,
-      }),
+      body: JSON.stringify({ model, messages, stream: true }),
       signal,
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?.message || errorData.message || `API 请求失败: ${response.status}`;
-
-      if (response.status === 401) {
-        throw new Error('API Key 无效或已过期，请在设置中更新');
-      } else if (response.status === 429) {
-        throw new Error('请求过于频繁，请稍后重试');
-      }
-      throw new Error(errorMessage);
+      const msg = errorData.error?.message || errorData.message || `API 请求失败: ${response.status}`;
+      if (response.status === 401) throw new Error(`${provider.name} API Key 无效`);
+      if (response.status === 429) throw new Error(`${provider.name} 请求过于频繁`);
+      throw new Error(msg);
     }
 
-    // 处理流式响应
     const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('无法读取响应流');
-    }
+    if (!reader) throw new Error('无法读取响应流');
 
     const decoder = new TextDecoder();
     let buffer = '';
-    let fullContent = '';
-    let currentTextBlock = '';
 
     while (true) {
-      if (signal?.aborted) {
-        reader.cancel();
-        throw new Error('请求已取消');
-      }
-
+      if (signal?.aborted) { reader.cancel(); throw new Error('请求已取消'); }
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-
       for (const line of lines) {
         if (!line.trim() || !line.startsWith('data: ')) continue;
-
         const data = line.slice(6).trim();
         if (data === '[DONE]') continue;
-
         try {
           const event = JSON.parse(data);
-
           if (event.choices?.[0]?.delta?.content) {
-            const text = event.choices[0].delta.content;
-            fullContent += text;
-            currentTextBlock += text;
-            onText?.(text);
+            onText?.(event.choices[0].delta.content);
           }
-        } catch (e) {
-          // 忽略解析错误
-        }
+        } catch (e) {}
       }
     }
 
-    const duration = Date.now() - startTime;
-
-    onDone?.({
-      duration,
-      cost: 0, // OpenAI API 不返回成本
-    });
+    onDone?.({ duration: Date.now() - startTime, cost: 0 });
 
   } catch (error: any) {
     if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-      const enhancedError = new Error(
-        '无法连接到 API 服务器。请检查网络连接和 API 地址配置。'
-      );
-      onError?.(enhancedError);
-      throw enhancedError;
+      const err = new Error(`无法连接到 ${provider.name}，请检查网络或API Key`);
+      onError?.(err);
+      throw err;
     }
-
     onError?.(error);
     throw error;
   }
 }
 
-// ============ 辅助函数 ============
+// Gemini API
+async function sendGeminiMessage(params: {
+  apiKey: string;
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  onText?: (content: string) => void;
+  signal?: AbortSignal;
+  onDone?: (data: { duration: number; cost: number }) => void;
+  onError?: (error: Error) => void;
+}) {
+  const { apiKey, model, messages, onText, signal, onDone, onError } = params;
 
-function getApiKey(): string {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('openai_api_key');
-  if (!apiKey) {
-    throw new Error('未配置 API Key，请在设置中配置');
+  try {
+    const contents = messages
+      .filter(m => m.role !== 'system')
+      .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+
+    const systemInstruction = messages.find(m => m.role === 'system')?.content;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+        }),
+        signal,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `Gemini API 请求失败`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('无法读取响应流');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      if (signal?.aborted) { reader.cancel(); throw new Error('请求已取消'); }
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.trim() || !line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          if (event.candidates?.[0]?.content?.parts?.[0]?.text) {
+            onText?.(event.candidates[0].content.parts[0].text);
+          }
+        } catch (e) {}
+      }
+    }
+    onDone?.({ duration: 0, cost: 0 });
+
+  } catch (error) {
+    onError?.(error as Error);
+    throw error;
   }
-  return apiKey;
 }
 
 // ============ 设置相关 ============
 
-const CONFIG_KEY = 'news_agent_config';
+const CONFIG_KEY_STORAGE = 'news_agent_config';
 
-export function saveConfig(config: {
-  apiKey?: string;
-  theme?: string;
-  defaultModel?: string;
-}): void {
+export function saveConfig(config: { theme?: string; defaultModel?: string; providerId?: string }): void {
   try {
-    const current = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-    localStorage.setItem(CONFIG_KEY, JSON.stringify({ ...current, ...config }));
-  } catch (e) {
-    console.error('保存配置失败:', e);
-  }
+    const current = JSON.parse(localStorage.getItem(CONFIG_KEY_STORAGE) || '{}');
+    localStorage.setItem(CONFIG_KEY_STORAGE, JSON.stringify({ ...current, ...config }));
+  } catch (e) {}
 }
 
-export function loadConfig(): {
-  apiKey?: string;
-  theme?: string;
-  defaultModel?: string;
-} {
+export function loadConfig() {
   try {
-    return JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+    return JSON.parse(localStorage.getItem(CONFIG_KEY_STORAGE) || '{}');
   } catch (e) {
     return {};
   }
 }
 
 export function checkApiKeyConfigured(): boolean {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY || localStorage.getItem('openai_api_key');
-  return !!apiKey;
+  return checkAnyApiKeyConfigured();
 }
 
-// ============ 图像生成 ============
-
-interface ImageGenerationOptions {
-  prompt: string;
-  size?: '1:1' | '16:9' | '9:16';
-  imageUrl?: string;
+export async function generateImage(options: { prompt: string }): Promise<{ success: boolean; images: string[]; message: string }> {
+  return { success: false, images: [], message: '图像生成功能开发中' };
 }
-
-export async function generateImage(options: ImageGenerationOptions): Promise<{ success: boolean; images: string[]; message: string }> {
-  return {
-    success: false,
-    images: [],
-    message: '图像生成功能需要后端支持，当前为纯前端版本',
-  };
-}
-
-// ============ 音频转录 ============
 
 export async function transcribeAudio(file: File): Promise<{ success: boolean; text: string; message: string }> {
-  return {
-    success: false,
-    text: '',
-    message: '音频转录功能需要后端支持，当前为纯前端版本',
-  };
+  return { success: false, text: '', message: '音频转录功能开发中' };
 }
