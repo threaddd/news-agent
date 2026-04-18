@@ -1,91 +1,96 @@
 # Vercel 环境变量配置指南
 
-## 问题原因
-"Failed to fetch" 错误是因为前端无法直接调用 CodeBuddy API，存在跨域限制。
-
-## 解决方案
-通过 Vercel Serverless Function 作为代理来解决。
+## 已修复的问题
+已将 CodeBuddy API 替换为 **OpenAI 兼容 API**，现在支持：
+- OpenAI (GPT-4, GPT-4o, GPT-3.5)
+- Claude (通过 OpenRouter 等兼容层)
+- 任何支持 OpenAI 格式的 AI 服务
 
 ---
 
 ## 需要添加的环境变量
 
-在 Vercel 项目 Settings → Environment Variables 中添加以下变量：
+在 Vercel 项目 Settings → Environment Variables 中添加：
 
-### 1. CODEBUDDY_API_KEY
+### 1. OPENAI_API_KEY (必填)
 ```
-值: 你的 CodeBuddy API Key
+值: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
-**如何获取：**
-1. 访问 https://www.codebuddy.ai
-2. 登录后进入个人设置
-3. 找到 API Keys 部分
-4. 创建或复制现有的 API Key
 
-### 2. CODEBUDDY_API_BASE_URL
+**获取方式：**
+1. 打开 https://platform.openai.com/api-keys
+2. 登录/注册 OpenAI 账号
+3. 点击 "Create new secret key"
+4. 复制生成的 API Key
+
+### 2. OPENAI_API_BASE_URL (可选)
 ```
-值: https://api.codebuddy.ai/v1
+值: https://api.openai.com/v1
 ```
+
+如果你想使用 Claude 或其他模型，可以使用 OpenRouter：
+```
+值: https://openrouter.ai/api/v1
+```
+
+### 3. OPENAI_MODEL (可选)
+```
+值: gpt-4o
+```
+
+常用模型：
+- `gpt-4o` - OpenAI 最新模型（推荐）
+- `gpt-4o-mini` - 轻量级版本
+- `claude-3-5-sonnet-20241022` - Claude 3.5 (通过 OpenRouter)
+- `claude-3-5-haiku-20241022` - Claude 3.5 Haiku (通过 OpenRouter)
 
 ---
 
 ## 操作步骤
 
-### 方法 1: 通过 Vercel Dashboard（推荐）
+### 1. 打开 Vercel 项目设置
 
-1. 打开 https://vercel.com/dashboard
-2. 选择你的 `news-agent` 项目
-3. 点击顶部的 **Settings**（设置）
-4. 左侧菜单找到 **Environment Variables**（环境变量）
-5. 点击 **Add New**（添加新变量）
+访问 https://vercel.com/dashboard
+→ 选择 `news-agent` 项目
+→ 点击 **Settings**
+
+### 2. 添加环境变量
+
+左侧菜单点击 **Environment Variables**
+
+点击 **Add New** 添加以下变量：
 
 | Name | Value | Environments |
 |------|-------|--------------|
-| `CODEBUDDY_API_KEY` | `你的API密钥` | Production, Preview, Development |
-| `CODEBUDDY_API_BASE_URL` | `https://api.codebuddy.ai/v1` | Production, Preview, Development |
+| `OPENAI_API_KEY` | `sk-你的密钥` | Production, Preview, Development |
+| `OPENAI_API_BASE_URL` | `https://api.openai.com/v1` | Production, Preview, Development |
+| `OPENAI_MODEL` | `gpt-4o` | Production, Preview, Development |
 
-6. 点击 **Save**（保存）
+### 3. 部署
 
-### 方法 2: 使用 Vercel CLI
-
-```bash
-# 安装 Vercel CLI
-npm i -g vercel
-
-# 登录
-vercel login
-
-# 进入项目目录
-cd news-agent
-
-# 添加环境变量
-vercel env add CODEBUDDY_API_KEY
-vercel env add CODEBUDDY_API_BASE_URL
-
-# 部署
-vercel --prod
-```
+添加后会自动重新部署，或手动点击 **Redeploy**
 
 ---
 
-## 部署后
+## 使用 Claude API (可选)
 
-1. 添加环境变量后，Vercel 会自动重新部署
-2. 或者手动触发：在 Deployments 页面点击 **Redeploy**
+如果你想使用 Claude 而不是 OpenAI：
+
+1. 注册 OpenRouter: https://openrouter.ai
+2. 获取 API Key
+3. 设置环境变量：
+
+| Name | Value |
+|------|-------|
+| `OPENAI_API_KEY` | `sk-or-xxxxx你的OpenRouter密钥` |
+| `OPENAI_API_BASE_URL` | `https://openrouter.ai/api/v1` |
+| `OPENAI_MODEL` | `anthropic/claude-3.5-sonnet` |
 
 ---
 
 ## 验证是否生效
 
-1. 访问你的 Vercel 部署地址
+1. 访问部署的网站
 2. 进入设置页面
 3. 如果显示 "API Key 已配置"，说明配置成功
-4. 发送一条消息测试
-
----
-
-## 如果仍然报错
-
-可能是 CodeBuddy 没有公开的 REST API。请联系 CodeBuddy 官方获取正确的 API 使用方式。
-
-或者，如果你有其他 AI 服务的 API Key（如 OpenAI、Claude 等），可以修改代码来支持它们。
+4. 发送消息测试

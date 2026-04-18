@@ -1,9 +1,7 @@
 /**
- * Vercel Serverless Function - CodeBuddy API 代理
- * 处理前端到 CodeBuddy API 的请求，解决 CORS 问题
+ * Vercel Serverless Function - OpenAI 兼容 API 代理
  */
 
-// 简单的 JSON 响应助手
 function jsonResponse(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -17,43 +15,38 @@ function jsonResponse(data: any, status = 200) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { prompt, model, systemPrompt, stream, permissionMode } = body;
+    const { apiKey, baseUrl, model, messages, stream } = body;
 
-    // 获取 API Key
-    const apiKey = process.env.CODEBUDDY_API_KEY;
-    if (!apiKey) {
+    // 获取 API 配置
+    const key = apiKey || process.env.OPENAI_API_KEY;
+    const base = baseUrl || process.env.OPENAI_API_BASE_URL || 'https://api.openai.com/v1';
+
+    if (!key) {
       return jsonResponse({ error: 'API Key 未配置' }, 401);
     }
 
-    // 获取 API 基础地址
-    const apiBaseUrl = process.env.CODEBUDDY_API_BASE_URL || 'https://api.codebuddy.ai/v1';
-
-    // 调用 CodeBuddy API
-    const response = await fetch(`${apiBaseUrl}/agents/query`, {
+    const response = await fetch(`${base}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${key}`,
       },
       body: JSON.stringify({
-        prompt,
-        model,
-        systemPrompt,
+        model: model || 'gpt-4o',
+        messages,
         stream: stream ?? true,
-        permissionMode: permissionMode || 'default',
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      return jsonResponse({ 
-        error: errorData.message || `API 请求失败: ${response.status}` 
+      return jsonResponse({
+        error: errorData.error?.message || `API 请求失败: ${response.status}`
       }, response.status);
     }
 
-    // 如果是流式响应
+    // 流式响应
     if (stream) {
-      // 对于流式响应，我们使用 ReadableStream 转发
       const stream = new ReadableStream({
         async start(controller) {
           const reader = response.body?.getReader();
@@ -61,7 +54,7 @@ export async function POST(request: Request) {
             controller.close();
             return;
           }
-          
+
           try {
             while (true) {
               const { done, value } = await reader.read();
@@ -89,15 +82,15 @@ export async function POST(request: Request) {
     // 非流式响应
     const data = await response.json();
     return jsonResponse(data);
+
   } catch (error: any) {
     console.error('Proxy error:', error);
-    return jsonResponse({ 
-      error: `服务器错误: ${error.message || '未知错误'}` 
+    return jsonResponse({
+      error: `服务器错误: ${error.message || '未知错误'}`
     }, 500);
   }
 }
 
-// 处理 OPTIONS 请求（CORS 预检）
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,

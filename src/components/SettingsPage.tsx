@@ -138,7 +138,7 @@ export function SettingsPage({
     setSavingEnv(true);
     try {
       saveConfig({ apiKey: envConfig.apiKey.trim() });
-      localStorage.setItem('codebuddy_api_key', envConfig.apiKey.trim());
+      localStorage.setItem('openai_api_key', envConfig.apiKey.trim());
       
       MessagePlugin.success('API Key 保存成功');
       setShowEnvConfig(false);
@@ -266,7 +266,7 @@ export function SettingsPage({
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">未配置 API Key</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">请配置 CodeBuddy API Key 以使用 AI 功能</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">请配置 OpenAI API Key 以使用 AI 功能</p>
                 </div>
               </>
             )}
@@ -285,7 +285,7 @@ export function SettingsPage({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    CodeBuddy API Key
+                    OpenAI API Key
                   </label>
                   <Input
                     value={envConfig.apiKey}
@@ -296,7 +296,7 @@ export function SettingsPage({
                     className="!bg-white dark:!bg-gray-800"
                   />
                   <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    从 <a href="https://www.codebuddy.ai" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">CodeBuddy</a> 获取 API Key
+                    从 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenAI</a> 获取 API Key
                   </p>
                 </div>
                 
