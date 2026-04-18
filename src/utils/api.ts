@@ -1,9 +1,8 @@
 /**
- * API 调用层 - 前端直接调用 CodeBuddy API
+ * API 调用层 - 前端直接调用 CodeBuddy REST API
  * 适用于部署到纯静态托管平台（如 Vercel）
  */
 
-import { query, unstable_v2_createSession } from '@tencent-ai/agent-sdk';
 import { Message, ToolCall, ContentBlock, Session, CustomAgent } from '../types';
 
 // 获取 API Key
@@ -32,7 +31,6 @@ export function loadSessionsFromStorage(): Session[] {
     const data = localStorage.getItem(SESSIONS_KEY);
     if (data) {
       const sessions = JSON.parse(data);
-      // 转换日期字符串
       return sessions.map((s: any) => ({
         ...s,
         createdAt: new Date(s.createdAt),
@@ -114,7 +112,6 @@ const MODELS_KEY = 'news_agent_models';
  * 获取可用模型列表
  */
 export async function fetchModels(): Promise<Array<{ modelId: string; name: string; description?: string }>> {
-  // 使用硬编码的模型列表，因为 SDK 的 listModels 需要认证
   const models = [
     { modelId: 'gemini-3.1-pro', name: 'Gemini 3.1 Pro', description: '最新的大模型，支持多模态' },
     { modelId: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: 'Anthropic 的高效模型' },
@@ -166,7 +163,7 @@ interface SendMessageOptions {
 }
 
 /**
- * 发送消息并处理流式响应
+ * 发送消息并处理流式响应 - 使用 REST API
  */
 export async function sendMessage(options: SendMessageOptions): Promise<void> {
   const {
@@ -187,6 +184,7 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
   } = options;
 
   const apiKey = getApiKey();
+  const apiBaseUrl = getApiBaseUrl();
   const assistantMessageId = crypto.randomUUID();
   
   onInit?.({ sessionId, assistantMessageId });
@@ -196,43 +194,66 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
   const finalSystemPrompt = systemPrompt || agent?.systemPrompt || '';
 
   try {
-    // 使用 CodeBuddy SDK 的 query API
-    const stream = query({
-      apiKey,
-      prompt: message,
-      options: {
+    // 直接调用 CodeBuddy REST API
+    const response = await fetch(`${apiBaseUrl}/v1/agents/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        prompt: message,
         model,
         systemPrompt: finalSystemPrompt,
-        cwd: options.cwd || '/',
+        stream: true,
         permissionMode,
-        permissionRequestHandler: async (request) => {
-          // 这里可以实现权限请求处理
-          console.log('[API] Permission request:', request.tool, request.input);
-          return { approved: true }; // 默认批准
-        },
-        signal,
-      },
+      }),
+      signal,
     });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `API 请求失败: ${response.status}`);
+    }
+
+    // 处理流式响应
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('无法读取响应流');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
     let currentToolCalls: ToolCall[] = [];
     let fullContent = '';
     let contentBlocks: ContentBlock[] = [];
     let currentTextBlock = '';
 
-    for await (const msg of stream) {
+    while (true) {
       if (signal?.aborted) {
+        reader.cancel();
         throw new Error('请求已取消');
       }
 
-      if (msg.type === 'system') {
-        // 系统消息
-        console.log('[Stream] System:', msg.content);
-      } else if (msg.type === 'assistant') {
-        // 助手消息
-        for (const block of msg.content) {
-          if (block.type === 'text') {
-            fullContent += block.text;
-            currentTextBlock += block.text;
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.trim() || !line.startsWith('data: ')) continue;
+        
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+
+        try {
+          const event = JSON.parse(data);
+          
+          if (event.type === 'text') {
+            fullContent += event.text;
+            currentTextBlock += event.text;
             
             const lastBlock = contentBlocks[contentBlocks.length - 1];
             if (lastBlock?.type === 'text') {
@@ -241,45 +262,44 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
               contentBlocks.push({ type: 'text', text: currentTextBlock });
             }
             
-            onText?.(block.text);
-          } else if (block.type === 'tool_use') {
-            // 工具调用
+            onText?.(event.text);
+          } else if (event.type === 'tool_use') {
             currentTextBlock = '';
             
             const toolCall: ToolCall = {
-              id: block.tool_use_id || crypto.randomUUID(),
-              name: block.name,
-              input: block.input,
+              id: event.toolUseId || crypto.randomUUID(),
+              name: event.name,
+              input: event.input,
               status: 'running',
             };
             currentToolCalls.push(toolCall);
             contentBlocks.push({ type: 'tool_use', toolCall });
             
             onTool?.(toolCall);
-          } else if (block.type === 'tool_result') {
-            // 工具结果
-            const toolId = block.tool_use_id;
-            const content = typeof block.content === 'string' 
-              ? block.content 
-              : JSON.stringify(block.content);
-            const isError = (block as any).is_error || false;
+          } else if (event.type === 'tool_result') {
+            const toolId = event.toolUseId;
+            const toolContent = typeof event.content === 'string' 
+              ? event.content 
+              : JSON.stringify(event.content);
+            const isError = event.isError || false;
             
             const tool = currentToolCalls.find(t => t.id === toolId);
             if (tool) {
               tool.status = isError ? 'error' : 'completed';
-              tool.result = content;
+              tool.result = toolContent;
               tool.isError = isError;
             }
             
-            onToolResult?.(toolId, content, isError);
+            onToolResult?.(toolId, toolContent, isError);
+          } else if (event.type === 'done') {
+            onDone?.({ 
+              duration: event.duration || 0, 
+              cost: event.cost || 0 
+            });
           }
+        } catch (e) {
+          console.warn('解析事件失败:', e);
         }
-      } else if (msg.type === 'result') {
-        // 完成
-        onDone?.({ 
-          duration: msg.duration || 0, 
-          cost: msg.cost || 0 
-        });
       }
     }
 
@@ -331,11 +351,8 @@ interface ImageGenerationOptions {
 
 /**
  * 生成图像
- * 注意：纯前端版本无法直接调用腾讯混元 API，需要后端支持
- * 这里提供占位实现
  */
 export async function generateImage(options: ImageGenerationOptions): Promise<{ success: boolean; images: string[]; message: string }> {
-  // 图像生成需要后端支持，这里返回提示
   return {
     success: false,
     images: [],
@@ -347,7 +364,6 @@ export async function generateImage(options: ImageGenerationOptions): Promise<{ 
 
 /**
  * 音频转录
- * 注意：纯前端版本无法使用，需要 Whisper 后端
  */
 export async function transcribeAudio(file: File): Promise<{ success: boolean; text: string; message: string }> {
   return {
