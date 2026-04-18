@@ -9,7 +9,7 @@
  * - Gemini (Google)
  */
 
-import { Message, ToolCall, ContentBlock, Session, CustomAgent } from '../types';
+import { Message, ToolCall, ContentBlock, Session, CustomAgent, Model } from '../types';
 
 // ============ 配置 ============
 
@@ -181,8 +181,14 @@ export function getSessionFromStorage(sessionId: string): Session | undefined {
 
 // ============ 模型列表 ============
 
-export async function fetchModels(): Promise<AIModel[]> {
-  return getAllModels();
+export async function fetchModels(): Promise<Model[]> {
+  // 转换为兼容 Model 类型（使用 modelId 而不是 id）
+  const allModels = getAllModels();
+  return allModels.map(m => ({
+    modelId: m.id,
+    name: m.name,
+    description: m.description,
+  }));
 }
 
 export function getCachedModels(): AIModel[] {

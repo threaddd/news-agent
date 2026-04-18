@@ -137,7 +137,9 @@ export function ChatInput({
                   suffixIcon={<ChevronDownIcon />}
                 >
                   {models.map(model => (
-                    <Select.Option key={model.modelId} value={model.modelId} label={model.name} />
+                    <Select.Option key={model.modelId} value={model.modelId} label={model.name}>
+                      {model.name}
+                    </Select.Option>
                   ))}
                 </Select>
                 

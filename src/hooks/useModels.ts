@@ -6,18 +6,21 @@ const STORAGE_KEY = 'defaultModel';
 
 export function useModels() {
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEY) || '';
-  });
+  const [selectedModel, setSelectedModel] = useState<string>('');
 
   const fetchModels = useCallback(async () => {
     try {
       const modelList = await apiFetchModels();
       setModels(modelList);
-      if (modelList.length > 0 && !selectedModel) {
-        const savedDefault = localStorage.getItem(STORAGE_KEY);
-        const modelToUse = savedDefault && modelList.some((m: any) => m.modelId === savedDefault)
-          ? savedDefault
+      
+      // 获取当前保存的模型
+      const savedModelId = localStorage.getItem(STORAGE_KEY);
+      
+      if (modelList.length > 0) {
+        // 如果有保存的模型且在列表中存在，使用保存的
+        // 否则使用第一个模型
+        const modelToUse = savedModelId && modelList.some(m => m.modelId === savedModelId)
+          ? savedModelId
           : modelList[0].modelId;
         setSelectedModel(modelToUse);
         localStorage.setItem(STORAGE_KEY, modelToUse);
@@ -25,7 +28,7 @@ export function useModels() {
     } catch (error) {
       console.error('Failed to fetch models:', error);
     }
-  }, [selectedModel]);
+  }, []);
 
   // 初始加载
   useEffect(() => {
