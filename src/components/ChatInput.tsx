@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import { Select, Tooltip } from 'tdesign-react';
+import { Select, Tooltip, MessagePlugin } from 'tdesign-react';
 import { ChatSender } from '@tdesign-react/chat';
 import { ChevronDownIcon, LockOnIcon, LockOffIcon, EditIcon, TaskIcon } from 'tdesign-icons-react';
 import { Model, PermissionMode } from '../types';
@@ -77,12 +77,19 @@ export function ChatInput({
   const handleSend = useCallback((e: any) => {
     console.log('ChatSender send event:', e);
     const content = e?.detail?.message || e?.detail || e?.message || inputValue;
-    if (content && typeof content === 'string' && content.trim() && selectedModel) {
+    
+    // 检查是否有模型可选
+    if (models.length === 0) {
+      MessagePlugin.warning('正在加载模型，请稍候...');
+      return;
+    }
+    
+    if (content && typeof content === 'string' && content.trim()) {
       onSend(content.trim());
-    } else if (inputValue.trim() && selectedModel) {
+    } else if (inputValue.trim()) {
       onSend(inputValue.trim());
     }
-  }, [inputValue, selectedModel, onSend]);
+  }, [inputValue, models.length, onSend]);
 
   const handleChange = useCallback((e: any) => {
     console.log('ChatSender change event:', e);
@@ -115,7 +122,6 @@ export function ChatInput({
               ref={chatSenderRef}
               value={inputValue}
               placeholder="输入消息，AI 助手为您服务..."
-              disabled={!selectedModel}
               loading={isLoading}
               autosize={{ minRows: 1, maxRows: 6 }}
               actions={['send']}
