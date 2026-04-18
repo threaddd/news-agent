@@ -49,7 +49,7 @@ function AppContent() {
   // Hooks
   const { theme, toggleTheme } = useTheme();
   const { agents, addAgent, updateAgent, deleteAgent, getAgent } = useAgents();
-  const { models, selectedModel, setSelectedModel, fetchModels } = useModels();
+  const { models, selectedModel, selectedProviderId, setSelectedModel, setSelectedProviderId, fetchModels } = useModels();
   const {
     sessions,
     setSessions,
