@@ -202,7 +202,8 @@ export function getCurrentProvider(): { providerId: string; modelId: string } {
   if (stored) {
     return JSON.parse(stored);
   }
-  return { providerId: 'groq', modelId: 'llama-3.3-70b-versatile' };
+  // 默认使用 Ollama 本地模型（不需要 API Key）
+  return { providerId: 'ollama', modelId: 'llama3.2' };
 }
 
 export function setCurrentProvider(providerId: string, modelId: string): void {
@@ -210,6 +211,9 @@ export function setCurrentProvider(providerId: string, modelId: string): void {
 }
 
 export function getApiKey(providerId: string): string | undefined {
+  // Ollama 本地模型不需要 API Key
+  if (providerId === 'ollama') return 'ollama';
+  
   const envKey = import.meta.env[`VITE_${providerId.toUpperCase()}_API_KEY`];
   if (envKey) return envKey;
   return localStorage.getItem(`${API_KEY_PREFIX}${providerId}`);
