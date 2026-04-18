@@ -6,7 +6,7 @@ import {
   TrashIcon, 
   CheckCircle, 
   XCircle, 
-  Warning, 
+  AlertTriangle, 
   Lock, 
   Key,
   Save,
@@ -263,7 +263,7 @@ export function SettingsPage({
               </>
             ) : (
               <>
-                <Warning className="w-5 h-5 text-amber-500" />
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">未配置 API Key</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">请配置 CodeBuddy API Key 以使用 AI 功能</p>
