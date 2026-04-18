@@ -1,6 +1,10 @@
 import { useState, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { Message, ToolCall, PermissionRequest, PermissionMode, Session, CustomAgent, ContentBlock } from '../types';
+import { 
+  sendMessage as apiSendMessage,
+  createSessionInStorage,
+  saveSessionsToStorage,
+} from '../utils/api';
 
 const STORAGE_KEYS = {
   draftInput: 'draftInput',
@@ -17,7 +21,7 @@ interface UseChatOptions {
   updateSessionModel: (sessionId: string, modelId: string) => void;
   setCurrentSessionId: (id: string | null) => void;
   setSessions: React.Dispatch<React.SetStateAction<Session[]>>;
-  initialAgentId?: string; // 初始化新会话时使用的 Agent ID
+  initialAgentId?: string;
 }
 
 interface NewChatOptions {
@@ -43,8 +47,9 @@ export function useChat(options: UseChatOptions) {
     return localStorage.getItem(STORAGE_KEYS.draftInput) || '';
   });
   const [permissionRequest, setPermissionRequest] = useState<PermissionRequest | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  // 保存输入框内容到 localStorage（防抖）
+  // 保存输入框内容到 localStorage
   const saveInput = useCallback((value: string) => {
     setInputValue(value);
   }, []);
@@ -60,43 +65,40 @@ export function useChat(options: UseChatOptions) {
     let sessionId = currentSessionId;
     let currentCwd = currentSession?.cwd;
     let currentAgentId = currentSession?.agentId || 'default';
-    let currentPermissionMode = currentSession?.permissionMode || 'default';
     
-    // 如果没有当前会话，使用新对话页面的选项创建新会话
+    // 如果没有当前会话，创建新会话
     if (!sessionId && newChatOptions) {
-      // 如果有 initialAgentId，优先使用；否则使用 newChatOptions.agentId
       const effectiveAgentId = initialAgentId || newChatOptions.agentId;
-      const selectedAgent = getAgent(effectiveAgentId);
-      const agentPermissionMode = selectedAgent?.permissionMode || 'default';
-      const finalPermissionMode = newChatOptions.permissionMode !== 'default' 
-        ? newChatOptions.permissionMode 
-        : agentPermissionMode;
       
       const newSession: Session = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         title: messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : ''),
         model: selectedModel,
         agentId: effectiveAgentId,
         cwd: newChatOptions.cwd || undefined,
-        permissionMode: finalPermissionMode,
+        permissionMode: newChatOptions.permissionMode,
         createdAt: new Date(),
+        updatedAt: new Date(),
         messages: []
       };
       
-      setSessions(prev => [newSession, ...prev]);
+      setSessions(prev => {
+        const updated = [newSession, ...prev];
+        saveSessionsToStorage(updated);
+        return updated;
+      });
       setCurrentSessionId(newSession.id);
       sessionId = newSession.id;
       currentCwd = newSession.cwd;
-      currentAgentId = newSession.agentId || 'default';
-      currentPermissionMode = newSession.permissionMode || 'default';
+      currentAgentId = newSession.agentId;
       
       updateSessionModel(newSession.id, selectedModel);
       
       onNavigate?.(`/chat/${newSession.id}`);
     }
 
-    const tempUserMessageId = uuidv4();
-    const tempAssistantMessageId = uuidv4();
+    const tempUserMessageId = crypto.randomUUID();
+    const tempAssistantMessageId = crypto.randomUUID();
 
     const userMessage: Message = {
       id: tempUserMessageId,
@@ -115,272 +117,196 @@ export function useChat(options: UseChatOptions) {
       contentBlocks: []
     };
 
-    setSessions(prev => prev.map(s => {
-      if (s.id === sessionId) {
-        const newTitle = s.messages.length === 0 
-          ? messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : '')
-          : s.title;
-        return {
-          ...s,
-          title: newTitle,
-          messages: [...s.messages, userMessage, assistantMessage]
-        };
-      }
-      return s;
-    }));
+    setSessions(prev => {
+      const updated = prev.map(s => {
+        if (s.id === sessionId) {
+          const newTitle = s.messages.length === 0 
+            ? messageContent.slice(0, 30) + (messageContent.length > 30 ? '...' : '')
+            : s.title;
+          return {
+            ...s,
+            title: newTitle,
+            messages: [...s.messages, userMessage, assistantMessage]
+          };
+        }
+        return s;
+      });
+      saveSessionsToStorage(updated);
+      return updated;
+    });
 
     setInputValue('');
     localStorage.removeItem(STORAGE_KEYS.draftInput);
     setIsLoading(true);
 
-    const agent = getAgent(currentAgentId);
-    const systemPrompt = agent?.systemPrompt;
+    // 创建 AbortController 用于取消请求
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          message: messageContent,
-          model: selectedModel,
-          systemPrompt,
-          cwd: currentCwd,
-          permissionMode: currentPermissionMode,
-        })
-      });
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = '';
-      let usedModel = selectedModel;
-      let currentToolCalls: ToolCall[] = [];
-      let contentBlocks: ContentBlock[] = [];
-      let currentTextBlock: string = '';  // 当前正在积累的文本块
-      let realSessionId: string = sessionId!;
-      let realAssistantMessageId = tempAssistantMessageId;
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                
-                if (data.type === 'init') {
-                  realSessionId = data.sessionId;
-                  realAssistantMessageId = data.assistantMessageId;
-                  usedModel = data.model;
-                  
-                  if (realSessionId !== sessionId) {
-                    setSessions(prev => prev.map(s => 
-                      s.id === sessionId ? { ...s, id: realSessionId } : s
-                    ));
-                    setCurrentSessionId(realSessionId);
-                    sessionId = realSessionId;
-                  }
-                  
-                  setSessions(prev => prev.map(s => {
-                    if (s.id === realSessionId) {
-                      return {
-                        ...s,
-                        messages: s.messages.map(m => 
-                          m.id === tempAssistantMessageId 
-                            ? { ...m, id: realAssistantMessageId }
-                            : m
-                        )
-                      };
-                    }
-                    return s;
-                  }));
-                } else if (data.type === 'text') {
-                  fullContent += data.content;
-                  currentTextBlock += data.content;
-                  
-                  // 更新或创建最后一个文本块
-                  const lastBlock = contentBlocks[contentBlocks.length - 1];
-                  if (lastBlock && lastBlock.type === 'text') {
-                    lastBlock.text = currentTextBlock;
-                  } else if (currentTextBlock) {
-                    contentBlocks.push({ type: 'text', text: currentTextBlock });
-                  }
-                  
-                  setSessions(prev => prev.map(s => {
-                    if (s.id === realSessionId) {
-                      return {
-                        ...s,
-                        messages: s.messages.map(m => 
-                          m.id === realAssistantMessageId 
-                            ? { ...m, content: fullContent, model: usedModel, toolCalls: [...currentToolCalls], contentBlocks: [...contentBlocks] }
-                            : m
-                        )
-                      };
-                    }
-                    return s;
-                  }));
-                } else if (data.type === 'tool') {
-                  // 如果有累积的文本，先结束当前文本块
-                  currentTextBlock = '';
-                  
-                  const toolCall: ToolCall = {
-                    id: data.id || uuidv4(),
-                    name: data.name,
-                    input: data.input,
-                    status: 'running'
-                  };
-                  currentToolCalls.push(toolCall);
-                  
-                  // 添加工具调用块
-                  contentBlocks.push({ type: 'tool_use', toolCall });
-                  
-                  setSessions(prev => prev.map(s => {
-                    if (s.id === realSessionId) {
-                      return {
-                        ...s,
-                        messages: s.messages.map(m => 
-                          m.id === realAssistantMessageId 
-                            ? { ...m, toolCalls: [...currentToolCalls], contentBlocks: [...contentBlocks] }
-                            : m
-                        )
-                      };
-                    }
-                    return s;
-                  }));
-                } else if (data.type === 'tool_result') {
-                  const toolId = data.toolId;
-                  const toolIndex = toolId 
-                    ? currentToolCalls.findIndex(t => t.id === toolId)
-                    : currentToolCalls.length - 1;
-                  
-                  if (toolIndex >= 0) {
-                    currentToolCalls[toolIndex].status = data.isError ? 'error' : 'completed';
-                    currentToolCalls[toolIndex].isError = data.isError || false;
-                    currentToolCalls[toolIndex].result = typeof data.content === 'string' 
-                      ? data.content 
-                      : JSON.stringify(data.content);
-                    
-                    // 同步更新 contentBlocks 中对应的工具调用
-                    const blockIndex = contentBlocks.findIndex(
-                      b => b.type === 'tool_use' && b.toolCall.id === currentToolCalls[toolIndex].id
-                    );
-                    if (blockIndex >= 0) {
-                      (contentBlocks[blockIndex] as { type: 'tool_use'; toolCall: ToolCall }).toolCall = { ...currentToolCalls[toolIndex] };
-                    }
-                    
-                    setSessions(prev => prev.map(s => {
-                      if (s.id === realSessionId) {
-                        return {
-                          ...s,
-                          messages: s.messages.map(m => 
-                            m.id === realAssistantMessageId 
-                              ? { ...m, toolCalls: [...currentToolCalls], contentBlocks: [...contentBlocks] }
-                              : m
-                          )
-                        };
-                      }
-                      return s;
-                    }));
-                  }
-                } else if (data.type === 'done') {
-                  setSessions(prev => prev.map(s => {
-                    if (s.id === realSessionId) {
-                      return {
-                        ...s,
-                        messages: s.messages.map(m => 
-                          m.id === realAssistantMessageId 
-                            ? { ...m, isStreaming: false }
-                            : m
-                        )
-                      };
-                    }
-                    return s;
-                  }));
-                } else if (data.type === 'permission_request') {
-                  console.log('[Permission] Request received:', data);
-                  setPermissionRequest({
-                    requestId: data.requestId,
-                    toolUseId: data.toolUseId,
-                    toolName: data.toolName,
-                    input: data.input,
-                    sessionId: data.sessionId,
-                    timestamp: data.timestamp
-                  });
-                }
-              } catch {
-                // 忽略解析错误
-              }
-            }
+      await apiSendMessage({
+        sessionId: sessionId!,
+        message: messageContent,
+        model: selectedModel,
+        agentId: currentAgentId,
+        getAgent,
+        permissionMode: currentSession?.permissionMode || 'default',
+        cwd: currentCwd,
+        signal: controller.signal,
+        onInit: ({ sessionId: realSessionId, assistantMessageId: realMsgId }) => {
+          // 更新会话 ID（如果不同）
+          if (realSessionId !== sessionId) {
+            setSessions(prev => {
+              const updated = prev.map(s => 
+                s.id === sessionId ? { ...s, id: realSessionId } : s
+              );
+              saveSessionsToStorage(updated);
+              return updated;
+            });
+            setCurrentSessionId(realSessionId);
           }
-        }
-      }
+        },
+        onText: (content) => {
+          setSessions(prev => {
+            const updated = prev.map(s => {
+              if (s.id === sessionId) {
+                return {
+                  ...s,
+                  messages: s.messages.map(m => 
+                    m.id === tempAssistantMessageId 
+                      ? { ...m, content: m.content + content }
+                      : m
+                  )
+                };
+              }
+              return s;
+            });
+            saveSessionsToStorage(updated);
+            return updated;
+          });
+        },
+        onTool: (toolCall) => {
+          setSessions(prev => {
+            const updated = prev.map(s => {
+              if (s.id === sessionId) {
+                return {
+                  ...s,
+                  messages: s.messages.map(m => 
+                    m.id === tempAssistantMessageId 
+                      ? { ...m, toolCalls: [...(m.toolCalls || []), toolCall] }
+                      : m
+                  )
+                };
+              }
+              return s;
+            });
+            saveSessionsToStorage(updated);
+            return updated;
+          });
+        },
+        onToolResult: (toolId, content, isError) => {
+          setSessions(prev => {
+            const updated = prev.map(s => {
+              if (s.id === sessionId) {
+                return {
+                  ...s,
+                  messages: s.messages.map(m => {
+                    if (m.id === tempAssistantMessageId && m.toolCalls) {
+                      return {
+                        ...m,
+                        toolCalls: m.toolCalls.map(t => 
+                          t.id === toolId 
+                            ? { ...t, status: isError ? 'error' : 'completed', result: content, isError }
+                            : t
+                        )
+                      };
+                    }
+                    return m;
+                  })
+                };
+              }
+              return s;
+            });
+            saveSessionsToStorage(updated);
+            return updated;
+          });
+        },
+        onDone: () => {
+          setSessions(prev => {
+            const updated = prev.map(s => {
+              if (s.id === sessionId) {
+                return {
+                  ...s,
+                  messages: s.messages.map(m => 
+                    m.id === tempAssistantMessageId 
+                      ? { ...m, isStreaming: false }
+                      : m
+                  ),
+                  updatedAt: new Date()
+                };
+              }
+              return s;
+            });
+            saveSessionsToStorage(updated);
+            return updated;
+          });
+        },
+        onError: (error) => {
+          console.error('Chat error:', error);
+          setSessions(prev => {
+            const updated = prev.map(s => {
+              if (s.id === sessionId) {
+                return {
+                  ...s,
+                  messages: s.messages.map(m => 
+                    m.id === tempAssistantMessageId 
+                      ? { ...m, content: `错误: ${error.message || '请求失败，请重试'}`, isStreaming: false }
+                      : m
+                  )
+                };
+              }
+              return s;
+            });
+            saveSessionsToStorage(updated);
+            return updated;
+          });
+        },
+      });
     } catch (error) {
-      console.error('Chat error:', error);
-      setSessions(prev => prev.map(s => {
-        if (s.id === sessionId) {
-          return {
-            ...s,
-            messages: s.messages.map(m => 
-              m.id === tempAssistantMessageId 
-                ? { ...m, content: '发生错误，请重试', isStreaming: false }
-                : m
-            )
-          };
-        }
-        return s;
-      }));
+      // 错误已在 onError 中处理
     } finally {
       setIsLoading(false);
+      setAbortController(null);
     }
-  }, [currentSession, currentSessionId, selectedModel, getAgent, updateSessionModel, setCurrentSessionId, setSessions, isLoading]);
+  }, [
+    currentSession, 
+    currentSessionId, 
+    selectedModel, 
+    getAgent, 
+    updateSessionModel, 
+    setCurrentSessionId, 
+    setSessions, 
+    isLoading,
+    initialAgentId
+  ]);
 
   // 处理停止事件
   const handleStop = useCallback(() => {
-    console.log('ChatSender stop event');
+    if (abortController) {
+      abortController.abort();
+    }
     setIsLoading(false);
-  }, []);
+  }, [abortController]);
 
   // 处理权限允许
   const handlePermissionAllow = useCallback(async () => {
-    if (!permissionRequest) return;
-    
-    console.log('[Permission] User allowed:', permissionRequest.requestId);
-    
-    await fetch('/api/permission-response', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        requestId: permissionRequest.requestId,
-        behavior: 'allow'
-      })
-    });
-    
     setPermissionRequest(null);
-  }, [permissionRequest]);
+  }, []);
 
   // 处理权限拒绝
   const handlePermissionDeny = useCallback(async () => {
-    if (!permissionRequest) return;
-    
-    console.log('[Permission] User denied:', permissionRequest.requestId);
-    
-    await fetch('/api/permission-response', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        requestId: permissionRequest.requestId,
-        behavior: 'deny',
-        message: '用户拒绝了此操作'
-      })
-    });
-    
     setPermissionRequest(null);
-  }, [permissionRequest]);
+  }, []);
 
   return {
     isLoading,

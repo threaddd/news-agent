@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Model } from '../types';
+import { fetchModels as apiFetchModels } from '../utils/api';
 
 const STORAGE_KEY = 'defaultModel';
 
@@ -11,14 +12,13 @@ export function useModels() {
 
   const fetchModels = useCallback(async () => {
     try {
-      const res = await fetch('/api/models');
-      const data = await res.json();
-      setModels(data.models || []);
-      if (data.models?.length > 0 && !selectedModel) {
+      const modelList = await apiFetchModels();
+      setModels(modelList);
+      if (modelList.length > 0 && !selectedModel) {
         const savedDefault = localStorage.getItem(STORAGE_KEY);
-        const modelToUse = savedDefault && data.models.some((m: Model) => m.modelId === savedDefault)
+        const modelToUse = savedDefault && modelList.some((m: any) => m.modelId === savedDefault)
           ? savedDefault
-          : (data.defaultModel || data.models[0].modelId);
+          : modelList[0].modelId;
         setSelectedModel(modelToUse);
         localStorage.setItem(STORAGE_KEY, modelToUse);
       }

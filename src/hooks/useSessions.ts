@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Session, Message } from '../types';
+import { 
+  loadSessionsFromStorage, 
+  saveSessionsToStorage,
+  deleteSessionFromStorage,
+} from '../utils/api';
 
 const STORAGE_KEYS = {
   sessionModels: 'sessionModels',
@@ -22,22 +27,11 @@ export function useSessions() {
   // 获取当前会话
   const currentSession = sessions.find(s => s.id === currentSessionId);
 
-  // 从 API 加载会话列表
+  // 从本地存储加载会话列表
   const fetchSessions = useCallback(async () => {
     try {
-      const res = await fetch('/api/sessions');
-      const data = await res.json();
-      
-      if (data.sessions) {
-        const loadedSessions: Session[] = data.sessions.map((s: any) => ({
-          id: s.id,
-          title: s.title,
-          model: s.model,
-          createdAt: new Date(s.created_at),
-          messages: []
-        }));
-        setSessions(loadedSessions);
-      }
+      const loadedSessions = loadSessionsFromStorage();
+      setSessions(loadedSessions);
     } catch (error) {
       console.error('Failed to fetch sessions:', error);
     }
@@ -45,33 +39,14 @@ export function useSessions() {
 
   // 加载单个会话的消息
   const loadSessionMessages = useCallback(async (sessionId: string) => {
-    try {
-      const res = await fetch(`/api/sessions/${sessionId}`);
-      const data = await res.json();
-      
-      if (data.messages) {
-        const messages: Message[] = data.messages.map((m: any) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-          model: m.model,
-          timestamp: new Date(m.created_at),
-          toolCalls: m.tool_calls || undefined
-        }));
-        
-        setSessions(prev => prev.map(s => 
-          s.id === sessionId ? { ...s, messages } : s
-        ));
-      }
-    } catch (error) {
-      console.error('Failed to load session messages:', error);
-    }
+    // 本地存储版本中，消息已经包含在会话中，不需要额外加载
+    // 这个函数保留接口兼容性
   }, []);
 
   // 删除会话
   const deleteSession = useCallback(async (sessionId: string): Promise<string | null> => {
     try {
-      await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+      deleteSessionFromStorage(sessionId);
       
       let navigateTo: string | null = null;
       
@@ -106,40 +81,52 @@ export function useSessions() {
       localStorage.setItem(STORAGE_KEYS.sessionModels, JSON.stringify(updated));
       return updated;
     });
-    setSessions(prev => prev.map(s => 
-      s.id === sessionId ? { ...s, model: modelId } : s
-    ));
+    setSessions(prev => {
+      const updated = prev.map(s => 
+        s.id === sessionId ? { ...s, model: modelId } : s
+      );
+      // 同步到本地存储
+      saveSessionsToStorage(updated);
+      return updated;
+    });
   }, []);
 
   // 添加新会话
   const addSession = useCallback((session: Session) => {
-    setSessions(prev => [session, ...prev]);
+    setSessions(prev => {
+      const updated = [session, ...prev];
+      saveSessionsToStorage(updated);
+      return updated;
+    });
     setCurrentSessionId(session.id);
   }, []);
 
   // 更新会话
   const updateSession = useCallback((sessionId: string, updates: Partial<Session>) => {
-    setSessions(prev => prev.map(s => 
-      s.id === sessionId ? { ...s, ...updates } : s
-    ));
+    setSessions(prev => {
+      const updated = prev.map(s => 
+        s.id === sessionId ? { ...s, ...updates } : s
+      );
+      saveSessionsToStorage(updated);
+      return updated;
+    });
   }, []);
 
   // 更新会话消息
   const updateSessionMessages = useCallback((sessionId: string, updater: (messages: Message[]) => Message[]) => {
-    setSessions(prev => prev.map(s => 
-      s.id === sessionId ? { ...s, messages: updater(s.messages) } : s
-    ));
+    setSessions(prev => {
+      const updated = prev.map(s => 
+        s.id === sessionId ? { ...s, messages: updater(s.messages) } : s
+      );
+      saveSessionsToStorage(updated);
+      return updated;
+    });
   }, []);
 
-  // 当切换会话时，加载该会话的消息
+  // 初始加载会话列表
   useEffect(() => {
-    if (currentSessionId) {
-      const session = sessions.find(s => s.id === currentSessionId);
-      if (session && session.messages.length === 0) {
-        loadSessionMessages(currentSessionId);
-      }
-    }
-  }, [currentSessionId, sessions, loadSessionMessages]);
+    fetchSessions();
+  }, [fetchSessions]);
 
   return {
     sessions,
