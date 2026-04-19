@@ -226,8 +226,13 @@ export function getApiKey(providerId: string): string | undefined {
   if (providerId === 'ollama') return 'ollama';
   
   const envKey = import.meta.env[`VITE_${providerId.toUpperCase()}_API_KEY`];
-  if (envKey) return envKey;
-  return localStorage.getItem(`${API_KEY_PREFIX}${providerId}`);
+  if (envKey) {
+    console.log(`[API] 使用环境变量中的 ${providerId} API Key`);
+    return envKey;
+  }
+  const localKey = localStorage.getItem(`${API_KEY_PREFIX}${providerId}`);
+  console.log(`[API] getApiKey(${providerId}): env=${!!envKey}, local=${!!localKey}`);
+  return localKey;
 }
 
 export function setApiKey(providerId: string, key: string): void {
@@ -260,6 +265,8 @@ interface SendMessageOptions {
 export async function sendMessage(options: SendMessageOptions): Promise<void> {
   const { sessionId, message, model, providerId, systemPrompt, agentId, getAgent, onInit, onText, onToolResult, onDone, onError, signal } = options;
 
+  console.log(`[API] sendMessage: providerId=${providerId}, model=${model}`);
+
   const apiKey = getApiKey(providerId);
   if (!apiKey) {
     const error = new Error(`请先配置 ${getProvider(providerId)?.name || providerId} 的 API Key`);
@@ -273,6 +280,8 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
     onError?.(error);
     throw error;
   }
+
+  console.log(`[API] 使用提供商: ${provider.name}, BaseURL: ${provider.baseUrl}`);
 
   const assistantMessageId = crypto.randomUUID();
   onInit?.({ sessionId, assistantMessageId });
