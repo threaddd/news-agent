@@ -55,10 +55,10 @@ export function useModels() {
             modelToUse = configuredProvider.models[0].id;
             providerToUse = configuredProvider.id;
           } else {
-            // 默认使用 Groq
-            const groqProvider = AI_PROVIDERS.find(p => p.id === 'groq');
-            modelToUse = groqProvider?.models[0]?.id || modelList[0].modelId;
-            providerToUse = 'groq';
+            // 默认使用 Gemini（免费额度）
+            const geminiProvider = AI_PROVIDERS.find(p => p.id === 'gemini');
+            modelToUse = geminiProvider?.models[0]?.id || 'gemini-1.5-flash';
+            providerToUse = 'gemini';
           }
         }
         
