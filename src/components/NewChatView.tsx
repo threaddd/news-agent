@@ -30,60 +30,67 @@ export function NewChatView({
 
   return (
     <div className="flex flex-col items-center justify-center h-full relative overflow-hidden">
-      {/* 动态背景效果 */}
+      {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent rounded-full animate-pulse" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-orange-500/10 via-red-500/5 to-transparent rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-gradient-to-br from-red-500/5 to-transparent rounded-full blur-3xl" style={{ animation: 'float 6s ease-in-out infinite' }} />
-        <div className="absolute bottom-1/3 left-1/4 w-48 h-48 bg-gradient-to-br from-orange-500/5 to-transparent rounded-full blur-3xl" style={{ animation: 'float 8s ease-in-out infinite reverse' }} />
+        <div 
+          className="absolute top-1/4 right-1/3 w-80 h-80 rounded-full blur-[100px] opacity-[0.07]"
+          style={{ backgroundColor: 'var(--td-brand-color)' }}
+        />
+        <div 
+          className="absolute bottom-1/3 left-1/4 w-64 h-64 rounded-full blur-[80px] opacity-[0.05]"
+          style={{ backgroundColor: 'var(--color-accent-orange)' }}
+        />
       </div>
 
-      <div className="w-full max-w-2xl relative z-10">
+      <div className="w-full max-w-2xl relative z-10 px-6">
         {/* Logo 和标题 */}
         <div className="text-center mb-10">
           <div 
-            className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-2xl mx-auto relative overflow-hidden group"
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 mx-auto"
             style={{ 
-              background: 'linear-gradient(135deg, #ef4444, #f97316, #fb923c)',
+              background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
+              boxShadow: '0 8px 24px rgba(0, 82, 217, 0.2)',
             }}
           >
-            {/* 光泽效果 */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            {/* 动画边框 */}
-            <div className="absolute inset-0 rounded-2xl p-[2px] bg-gradient-to-br from-white/40 to-transparent" style={{ WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor' }} />
-            <Newspaper size={36} className="text-white relative z-10 group-hover:scale-110 transition-transform duration-300" />
+            <Newspaper size={28} className="text-white" />
           </div>
           <h2 
-            className="text-3xl font-bold mb-3 bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent"
+            className="text-2xl font-bold mb-2"
+            style={{ color: 'var(--td-text-color-primary)' }}
           >
             {APP_CONFIG.name}
           </h2>
-          <p className="text-base" style={{ color: 'var(--td-text-color-secondary)' }}>
+          <p className="text-sm" style={{ color: 'var(--td-text-color-secondary)' }}>
             新闻专业主义驱动的智能采编助手
-          </p>
-          <p className="text-sm mt-2" style={{ color: 'var(--td-text-color-placeholder)' }}>
-            基于意图分类的记者人格 AI，为您提供专业的新闻生产支持
           </p>
         </div>
         
         {/* 快捷功能入口 */}
         <div className="grid grid-cols-3 gap-3 mb-8">
           {[
-            { icon: Newspaper, label: '新闻工作台', desc: '专业工具集', color: 'from-red-500 to-orange-500' },
-            { icon: Sparkles, label: '智能写作', desc: 'AI辅助创作', color: 'from-orange-500 to-amber-500' },
-            { icon: Bot, label: '智能对话', desc: '记者人格助手', color: 'from-amber-500 to-yellow-500' },
+            { icon: Newspaper, label: '新闻工作台', desc: '专业工具集', gradient: 'var(--td-brand-color)' },
+            { icon: Sparkles, label: '智能写作', desc: 'AI辅助创作', gradient: 'var(--color-accent-orange)' },
+            { icon: Bot, label: '智能对话', desc: '记者人格助手', gradient: 'var(--td-success-color)' },
           ].map((item, i) => (
             <div 
               key={i}
-              className="p-4 rounded-xl bg-gradient-to-br border border-gray-200/50 dark:border-gray-700/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
+              className="p-4 rounded-xl cursor-pointer transition-all duration-200 hover:-translate-y-0.5 group"
               style={{ 
-                background: 'var(--td-bg-color-component)',
+                backgroundColor: 'var(--td-bg-color-container)',
+                border: '1px solid var(--td-component-stroke)',
+                boxShadow: 'var(--td-shadow-1)',
               }}
             >
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-105 transition-transform"
+                style={{ 
+                  backgroundColor: item.gradient,
+                  boxShadow: `0 4px 12px rgba(0, 82, 217, 0.15)`,
+                }}
+              >
                 <item.icon size={20} className="text-white" />
               </div>
-              <h3 className="font-semibold text-sm mb-1" style={{ color: 'var(--td-text-color-primary)' }}>
+              <h3 className="font-semibold text-sm mb-0.5" style={{ color: 'var(--td-text-color-primary)' }}>
                 {item.label}
               </h3>
               <p className="text-xs" style={{ color: 'var(--td-text-color-placeholder)' }}>
@@ -98,17 +105,19 @@ export function NewChatView({
           <label className="block text-sm font-medium mb-3" style={{ color: 'var(--td-text-color-primary)' }}>
             选择 Agent
           </label>
-          <div className="grid grid-cols-2 gap-3 max-h-[280px] overflow-y-auto">
+          <div className="grid grid-cols-2 gap-2.5 max-h-[280px] overflow-y-auto">
             {agents.map(agent => {
               const AgentIcon = ICON_MAP[agent.icon || 'Bot'] || Bot;
               const isSelected = agent.id === newChatAgentId;
               return (
                 <div
                   key={agent.id}
-                  className="p-3 rounded-xl cursor-pointer transition-all duration-300 border-2 hover:shadow-md hover:-translate-y-0.5"
+                  className="p-3 rounded-lg cursor-pointer transition-all duration-200"
                   style={{
-                    borderColor: isSelected ? (agent.color || 'var(--td-brand-color)') : 'transparent',
-                    backgroundColor: isSelected ? 'var(--td-brand-color-light)' : 'var(--td-bg-color-component)',
+                    borderColor: isSelected ? 'var(--td-brand-color)' : 'var(--td-component-stroke)',
+                    borderWidth: '1.5px',
+                    borderStyle: 'solid',
+                    backgroundColor: isSelected ? 'var(--td-brand-color-light)' : 'var(--td-bg-color-container)',
                   }}
                   onClick={() => {
                     onSelectAgent(agent.id);
@@ -117,12 +126,12 @@ export function NewChatView({
                     }
                   }}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <div 
-                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md"
-                      style={{ backgroundColor: agent.color || '#0052d9' }}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: agent.color || 'var(--td-brand-color)' }}
                     >
-                      <AgentIcon size={20} color="white" />
+                      <AgentIcon size={18} color="white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate" style={{ color: 'var(--td-text-color-primary)' }}>
@@ -152,17 +161,16 @@ export function NewChatView({
             placeholder="例如：/Users/username/projects/my-app"
             prefixIcon={<FolderOpenIcon />}
           />
-          <p className="text-xs mt-1.5" style={{ color: 'var(--td-text-color-placeholder)' }}>
-            指定 Agent 的工作目录，用于文件操作等
-          </p>
         </div>
 
         {/* 选中的 Agent 预览 */}
         {selectedAgent && (
           <div 
-            className="p-4 rounded-xl border border-red-200/50 dark:border-red-800/50"
+            className="p-4 rounded-lg"
             style={{ 
-              background: 'linear-gradient(135deg, var(--td-brand-color-light), var(--td-bg-color-component))' 
+              background: 'var(--td-brand-color-light)',
+              border: '1px solid var(--td-brand-color)',
+              borderColor: 'rgba(0, 82, 217, 0.15)',
             }}
           >
             <div className="flex items-center gap-2 mb-2">
@@ -171,12 +179,12 @@ export function NewChatView({
                 return (
                   <>
                     <div 
-                      className="w-6 h-6 rounded-md flex items-center justify-center"
-                      style={{ backgroundColor: selectedAgent.color || '#0052d9' }}
+                      className="w-5 h-5 rounded flex items-center justify-center"
+                      style={{ backgroundColor: selectedAgent.color || 'var(--td-brand-color)' }}
                     >
-                      <Icon size={14} color="white" />
+                      <Icon size={12} color="white" />
                     </div>
-                    <span className="text-sm font-medium" style={{ color: 'var(--td-text-color-primary)' }}>
+                    <span className="text-sm font-medium" style={{ color: 'var(--td-brand-color)' }}>
                       {selectedAgent.name}
                     </span>
                   </>
@@ -189,7 +197,6 @@ export function NewChatView({
           </div>
         )}
         
-        {/* 提示文字 */}
         <p className="text-center text-xs mt-6" style={{ color: 'var(--td-text-color-placeholder)' }}>
           模型和权限模式可在输入框下方切换
         </p>

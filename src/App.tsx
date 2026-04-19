@@ -47,7 +47,7 @@ function AppContent() {
   const [selectedExpert, setSelectedExpert] = useState<Expert | null>(null);
 
   // Hooks
-  const { theme, toggleTheme } = useTheme();
+  const { theme, mode, toggleTheme, setThemeMode } = useTheme();
   const { agents, addAgent, updateAgent, deleteAgent, getAgent } = useAgents();
   const { models, selectedModel, selectedProviderId, setSelectedModel, setSelectedProviderId, fetchModels } = useModels();
   const {
@@ -215,11 +215,13 @@ function AppContent() {
           isToolsPage={isToolsPage}
           sidebarOpen={sidebarOpen}
           theme={theme}
+          themeMode={mode}
           currentSession={currentSession}
           currentAgent={currentAgent}
           models={models}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onToggleTheme={toggleTheme}
+          onSetThemeMode={setThemeMode}
           onRefreshModels={fetchModels}
         />
 

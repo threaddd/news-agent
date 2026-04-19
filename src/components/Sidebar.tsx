@@ -1,5 +1,5 @@
 import { Button, Tooltip } from 'tdesign-react';
-import { AddIcon, DeleteIcon, SettingIcon } from 'tdesign-icons-react';
+import { DeleteIcon, SettingIcon } from 'tdesign-icons-react';
 import { Bot, LayoutGrid, Newspaper, Plus, Users } from 'lucide-react';
 import { APP_CONFIG } from '../config';
 import { Session, Agent } from '../types';
@@ -42,102 +42,96 @@ export function Sidebar({
     <aside 
       className="flex flex-col flex-shrink-0 transition-all duration-300 overflow-hidden border-r"
       style={{ 
-        width: sidebarOpen ? 260 : 0,
-        background: 'linear-gradient(180deg, var(--td-bg-color-container) 0%, var(--td-bg-color-page) 100%)',
-        borderColor: 'var(--td-border-level-1-color)',
-        boxShadow: sidebarOpen ? '2px 0 12px rgba(0, 0, 0, 0.04)' : 'none',
+        width: sidebarOpen ? 256 : 0,
+        background: 'var(--td-bg-color-container)',
+        borderColor: 'var(--td-component-stroke)',
       }}
     >
       {/* Logo */}
-      <div className="h-14 px-4 flex items-center flex-shrink-0 border-b" style={{ borderColor: 'var(--td-border-level-1-color)' }}>
+      <div className="h-14 px-4 flex items-center flex-shrink-0 border-b" style={{ borderColor: 'var(--td-component-stroke)' }}>
         <div className="flex items-center gap-2.5">
           <div 
-            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ 
-              background: 'linear-gradient(135deg, #ef4444 0%, #f97316 50%, #fb923c 100%)',
+              background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
             }}
           >
-            <Newspaper size={18} className="text-white" />
+            <Newspaper size={16} className="text-white" />
           </div>
-          <div>
-            <span 
-              className="text-lg font-bold block"
-              style={{ 
-                background: 'linear-gradient(135deg, #ef4444, #f97316)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {APP_CONFIG.name}
-            </span>
-          </div>
+          <span 
+            className="text-base font-bold"
+            style={{ 
+              background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            {APP_CONFIG.name}
+          </span>
         </div>
       </div>
 
       {/* 快捷功能区 */}
-      <div className="p-3 space-y-2">
-        {/* 专家中心 */}
-        <Button 
-          icon={<Users size={16} />}
-          onClick={onOpenExperts}
-          block
-          variant={isExpertCenterPage ? 'filled' : 'outline'}
-          className="justify-start font-medium transition-all duration-200 hover:scale-[1.02]"
-          style={isExpertCenterPage ? {
-            background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-            border: 'none',
-          } : {
-            background: 'var(--td-bg-color-component)',
-            borderColor: 'var(--td-border-level-1-color)',
-          }}
-        >
-          <span style={isExpertCenterPage ? { color: 'white' } : {}}>专家中心</span>
-        </Button>
-
-        {/* 新闻工作台 */}
-        <Button 
-          icon={<LayoutGrid size={16} />}
-          onClick={onOpenTools}
-          block
-          variant={isToolsPage ? 'filled' : 'outline'}
-          className="justify-start font-medium transition-all duration-200 hover:scale-[1.02]"
-          style={isToolsPage ? {
-            background: 'linear-gradient(135deg, #ef4444, #f97316)',
-            border: 'none',
-          } : {
-            background: 'var(--td-bg-color-component)',
-            borderColor: 'var(--td-border-level-1-color)',
-          }}
-        >
-          <span style={isToolsPage ? { color: 'white' } : {}}>新闻工作台</span>
-        </Button>
-
+      <div className="p-2.5 space-y-1">
         {/* 新对话按钮 */}
-        <Button 
-          icon={<Plus size={16} />}
+        <button
           onClick={onNewChat}
-          block
-          variant="filled"
-          className="justify-start font-medium transition-all duration-200 hover:scale-[1.02]"
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-white"
           style={{
             background: 'linear-gradient(135deg, var(--td-brand-color), var(--td-brand-color-hover))',
-            border: 'none',
-            color: 'white',
+            boxShadow: '0 2px 8px rgba(0, 82, 217, 0.25)',
           }}
         >
+          <Plus size={16} />
           新对话
-        </Button>
+        </button>
+
+        {/* 专家中心 */}
+        <button
+          onClick={onOpenExperts}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
+          style={{
+            backgroundColor: isExpertCenterPage ? 'var(--td-brand-color-light)' : 'transparent',
+            color: isExpertCenterPage ? 'var(--td-brand-color)' : 'var(--td-text-color-secondary)',
+            fontWeight: isExpertCenterPage ? 600 : 400,
+          }}
+        >
+          <Users size={16} />
+          专家中心
+        </button>
+
+        {/* 新闻工作台 */}
+        <button
+          onClick={onOpenTools}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
+          style={{
+            backgroundColor: isToolsPage ? 'var(--td-brand-color-light)' : 'transparent',
+            color: isToolsPage ? 'var(--td-brand-color)' : 'var(--td-text-color-secondary)',
+            fontWeight: isToolsPage ? 600 : 400,
+          }}
+        >
+          <LayoutGrid size={16} />
+          新闻工作台
+        </button>
+      </div>
+
+      {/* 分隔线 */}
+      <div className="px-4 py-1">
+        <div className="h-px" style={{ backgroundColor: 'var(--td-component-stroke)' }} />
       </div>
 
       {/* 会话列表标题 */}
-      <div className="px-4 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--td-text-color-placeholder)' }}>
+      <div className="px-4 py-2 flex items-center justify-between">
+        <span className="text-xs font-medium tracking-wide" style={{ color: 'var(--td-text-color-placeholder)' }}>
           历史会话
+        </span>
+        <span className="text-xs" style={{ color: 'var(--td-text-color-placeholder)' }}>
+          {sessions.length}
         </span>
       </div>
 
       {/* 会话列表 */}
-      <div className="flex-1 overflow-y-auto px-2 space-y-1">
+      <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
         {sessions.map(session => {
           const sessionAgent = session.agentId ? getAgent(session.agentId) : getAgent('default');
           const AgentIcon = ICON_MAP[sessionAgent?.icon || 'Bot'] || Bot;
@@ -145,20 +139,14 @@ export function Sidebar({
           return (
             <div 
               key={session.id}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group hover:shadow-sm"
+              className="flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all duration-150 group"
               style={{
-                backgroundColor: isActive
-                  ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(249, 115, 22, 0.1))'
-                  : 'transparent',
-                border: isActive ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid transparent',
-                color: isActive
-                  ? 'var(--td-brand-color)' 
-                  : 'var(--td-text-color-secondary)'
+                backgroundColor: isActive ? 'var(--td-brand-color-light)' : 'transparent',
               }}
               onClick={() => onSelectSession(session.id)}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'var(--td-bg-color-component-hover)';
+                  e.currentTarget.style.backgroundColor = 'var(--td-bg-color-container-hover)';
                 }
               }}
               onMouseLeave={(e) => {
@@ -168,48 +156,54 @@ export function Sidebar({
               }}
             >
               <div 
-                className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center shadow-sm"
-                style={{ background: `linear-gradient(135deg, ${sessionAgent?.color || '#ef4444'}, ${sessionAgent?.color || '#f97316'})` }}
+                className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center"
+                style={{ 
+                  backgroundColor: isActive ? 'var(--td-brand-color)' : 'var(--td-bg-color-component)',
+                  color: isActive ? 'white' : 'var(--td-text-color-placeholder)',
+                }}
               >
-                <AgentIcon size={12} color="white" />
+                <AgentIcon size={11} />
               </div>
-              <span className="flex-1 truncate text-sm font-medium">{session.title}</span>
-              <Tooltip content="删除会话">
-                <Button
-                  className="opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
-                  variant="text"
-                  shape="circle"
-                  size="small"
-                  icon={<DeleteIcon />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteSession(session.id);
-                  }}
-                />
-              </Tooltip>
+              <span 
+                className="flex-1 truncate text-[13px]"
+                style={{ 
+                  color: isActive ? 'var(--td-brand-color)' : 'var(--td-text-color-secondary)',
+                  fontWeight: isActive ? 500 : 400,
+                }}
+              >
+                {session.title}
+              </span>
+              <button
+                className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all duration-150 hover:bg-red-50 dark:hover:bg-red-900/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteSession(session.id);
+                }}
+              >
+                <DeleteIcon size={14} style={{ color: 'var(--td-text-color-placeholder)' }} />
+              </button>
             </div>
           );
         })}
       </div>
       
-      {/* 底部设置按钮 */}
+      {/* 底部设置 */}
       <div 
-        className="p-3 border-t flex-shrink-0"
-        style={{ borderColor: 'var(--td-border-level-1-color)' }}
+        className="p-2.5 border-t flex-shrink-0"
+        style={{ borderColor: 'var(--td-component-stroke)' }}
       >
-        <Button 
-          icon={<SettingIcon />}
+        <button
           onClick={onOpenSettings}
-          block
-          variant={isSettingsPage ? 'filled' : 'text'}
-          className="justify-start"
-          style={isSettingsPage ? {
-            background: 'var(--td-bg-color-component)',
-            borderColor: 'var(--td-border-level-1-color)',
-          } : {}}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
+          style={{
+            backgroundColor: isSettingsPage ? 'var(--td-bg-color-component)' : 'transparent',
+            color: isSettingsPage ? 'var(--td-text-color-primary)' : 'var(--td-text-color-secondary)',
+            fontWeight: isSettingsPage ? 500 : 400,
+          }}
         >
+          <SettingIcon size={16} />
           设置
-        </Button>
+        </button>
       </div>
     </aside>
   );

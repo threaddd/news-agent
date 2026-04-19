@@ -26,13 +26,13 @@ export default {
           light: 'var(--td-brand-color-light)',
         },
         primary: {
-          DEFAULT: 'var(--td-text-color-primary)',
-          foreground: 'var(--td-bg-color-page)',
+          DEFAULT: 'var(--td-brand-color)',
+          foreground: 'white',
         }
       },
       borderRadius: {
-        'xl': '16px',
-        '2xl': '20px',
+        'xl': '12px',
+        '2xl': '16px',
       },
       animation: {
         'cursor-blink': 'blink 1s infinite',

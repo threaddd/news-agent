@@ -66,6 +66,7 @@ export interface CustomAgent {
 export type Agent = CustomAgent;
 
 export type Theme = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 /**
  * 权限请求 - 用于工具调用确认

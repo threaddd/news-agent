@@ -17,7 +17,6 @@ interface ChatInputProps {
   onPermissionModeChange: (mode: PermissionMode) => void;
 }
 
-// 权限模式配置
 const PERMISSION_MODE_CONFIG: Record<PermissionMode, { 
   label: string; 
   shortLabel: string;
@@ -30,32 +29,32 @@ const PERMISSION_MODE_CONFIG: Record<PermissionMode, {
     label: '默认模式', 
     shortLabel: '默认',
     icon: <LockOnIcon />, 
-    color: '#6366f1',
-    bgColor: 'rgba(99, 102, 241, 0.1)',
+    color: 'var(--td-brand-color)',
+    bgColor: 'var(--td-brand-color-light)',
     description: '每次操作都需要确认'
   },
   'acceptEdits': { 
     label: '自动编辑', 
     shortLabel: '自动编辑',
     icon: <EditIcon />, 
-    color: '#10b981',
-    bgColor: 'rgba(16, 185, 129, 0.1)',
+    color: 'var(--td-success-color)',
+    bgColor: 'rgba(43, 164, 113, 0.08)',
     description: '自动允许文件编辑操作'
   },
   'plan': { 
     label: '仅规划', 
     shortLabel: '仅规划',
     icon: <TaskIcon />, 
-    color: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.1)',
+    color: 'var(--td-warning-color)',
+    bgColor: 'rgba(227, 115, 24, 0.08)',
     description: '只生成计划，不执行操作'
   },
   'bypassPermissions': { 
     label: '全部允许', 
     shortLabel: '全部允许',
     icon: <LockOffIcon />, 
-    color: '#ef4444',
-    bgColor: 'rgba(239, 68, 68, 0.1)',
+    color: 'var(--td-error-color)',
+    bgColor: 'rgba(213, 73, 65, 0.08)',
     description: '跳过所有权限确认（危险）'
   },
 };
@@ -75,10 +74,8 @@ export function ChatInput({
   const chatSenderRef = useRef<any>(null);
 
   const handleSend = useCallback((e: any) => {
-    console.log('ChatSender send event:', e);
     const content = e?.detail?.message || e?.detail || e?.message || inputValue;
     
-    // 检查是否有模型可选
     if (models.length === 0) {
       MessagePlugin.warning('正在加载模型，请稍候...');
       return;
@@ -92,7 +89,6 @@ export function ChatInput({
   }, [inputValue, models.length, onSend]);
 
   const handleChange = useCallback((e: any) => {
-    console.log('ChatSender change event:', e);
     const value = e?.detail ?? e ?? '';
     onChange(typeof value === 'string' ? value : '');
   }, [onChange]);
@@ -101,24 +97,35 @@ export function ChatInput({
 
   return (
     <div 
-      className="px-4 pb-6 pt-4"
-      style={{ 
-        backgroundColor: 'var(--td-bg-color-page)'
-      }}
+      className="px-4 pb-5 pt-3"
+      style={{ backgroundColor: 'var(--td-bg-color-page)' }}
     >
       <div className="max-w-3xl mx-auto">
-        {/* 渐变边框容器 */}
+        {/* 输入框容器 */}
         <div 
-          className="rounded-2xl p-[2px] transition-all duration-300"
+          className="rounded-xl overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(249, 115, 22, 0.3), rgba(239, 68, 68, 0.3))',
-            boxShadow: '0 2px 12px rgba(239, 68, 68, 0.08)',
+            border: '1.5px solid var(--td-component-stroke)',
+            backgroundColor: 'var(--td-bg-color-container)',
+            boxShadow: 'var(--td-shadow-1)',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+          }}
+          onFocus={() => {
+            const el = document.activeElement?.closest('.chat-input-wrapper');
+            if (el) {
+              (el as HTMLElement).style.borderColor = 'var(--td-brand-color)';
+              (el as HTMLElement).style.boxShadow = '0 0 0 2px var(--td-brand-color-focus)';
+            }
+          }}
+          onBlur={() => {
+            const el = document.querySelector('.chat-input-wrapper');
+            if (el) {
+              (el as HTMLElement).style.borderColor = 'var(--td-component-stroke)';
+              (el as HTMLElement).style.boxShadow = 'var(--td-shadow-1)';
+            }
           }}
         >
-          <div 
-            className="rounded-[18px]"
-            style={{ backgroundColor: 'var(--td-bg-color-page)' }}
-          >
+          <div className="chat-input-wrapper" style={{ border: 'none', boxShadow: 'none' }}>
             <ChatSender
               ref={chatSenderRef}
               value={inputValue}
@@ -130,8 +137,7 @@ export function ChatInput({
               onStop={onStop}
               onChange={handleChange}
             >
-              {/* 模型选择器和权限模式选择器放在 footer-prefix 插槽 */}
-              <div slot="footer-prefix" className="flex items-center gap-3">
+              <div slot="footer-prefix" className="flex items-center gap-2.5">
                 {/* 模型选择器 */}
                 <Select
                   value={selectedModel}
@@ -150,11 +156,8 @@ export function ChatInput({
                   ))}
                 </Select>
                 
-                {/* 分隔线 */}
-                <div 
-                  className="h-4 w-px"
-                  style={{ background: 'linear-gradient(180deg, transparent, var(--td-component-stroke), transparent)' }}
-                />
+                {/* 分隔点 */}
+                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--td-text-color-placeholder)' }} />
                 
                 {/* 权限模式选择器 */}
                 <Tooltip content={currentModeConfig.description} placement="top">
@@ -167,7 +170,7 @@ export function ChatInput({
                     suffixIcon={<ChevronDownIcon />}
                     prefixIcon={
                       <span 
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
                         style={{ 
                           color: currentModeConfig.color,
                           backgroundColor: currentModeConfig.bgColor,

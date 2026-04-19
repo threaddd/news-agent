@@ -1,14 +1,14 @@
-import { Button, Tooltip, Tag } from 'tdesign-react';
+import { Button, Tooltip, Tag, Popup } from 'tdesign-react';
 import { 
-  RefreshIcon,
-  SunnyIcon,
-  MoonIcon,
   MenuFoldIcon,
   MenuUnfoldIcon,
+  SunnyIcon,
+  MoonIcon,
+  DesktopIcon,
 } from 'tdesign-icons-react';
 import { Bot, Newspaper } from 'lucide-react';
 import { APP_CONFIG } from '../config';
-import { Model, Session, Agent, Theme } from '../types';
+import { Model, Session, Agent, Theme, ThemeMode } from '../types';
 import { ICON_MAP } from '../utils/iconMap';
 
 interface HeaderProps {
@@ -16,11 +16,13 @@ interface HeaderProps {
   isToolsPage: boolean;
   sidebarOpen: boolean;
   theme: Theme;
+  themeMode: ThemeMode;
   currentSession: Session | undefined;
   currentAgent: Agent | undefined;
   models: Model[];
   onToggleSidebar: () => void;
   onToggleTheme: () => void;
+  onSetThemeMode: (mode: ThemeMode) => void;
   onRefreshModels: () => void;
 }
 
@@ -29,11 +31,13 @@ export function Header({
   isToolsPage,
   sidebarOpen,
   theme,
+  themeMode,
   currentSession,
   currentAgent,
   models,
   onToggleSidebar,
   onToggleTheme,
+  onSetThemeMode,
   onRefreshModels,
 }: HeaderProps) {
   const formatModelName = (modelId: string) => {
@@ -45,12 +49,15 @@ export function Header({
       .trim() || name;
   };
 
+  const themeIcon = themeMode === 'light' ? <SunnyIcon /> : themeMode === 'dark' ? <MoonIcon /> : <DesktopIcon />;
+  const themeLabel = themeMode === 'light' ? '浅色模式' : themeMode === 'dark' ? '深色模式' : '跟随系统';
+
   return (
     <header 
-      className="h-14 flex justify-between items-center px-4 flex-shrink-0 border-b backdrop-blur-xl transition-all duration-300"
+      className="h-14 flex justify-between items-center px-4 flex-shrink-0 border-b backdrop-blur-xl"
       style={{ 
-        backgroundColor: 'var(--td-bg-color-page-alpha, rgba(255, 255, 255, 0.8))',
-        borderColor: 'var(--td-border-level-1-color)',
+        backgroundColor: 'var(--td-bg-color-page-alpha)',
+        borderColor: 'var(--td-component-stroke)',
       }}
     >
       <div className="flex items-center gap-3">
@@ -59,11 +66,10 @@ export function Header({
           shape="circle"
           icon={sidebarOpen ? <MenuFoldIcon /> : <MenuUnfoldIcon />}
           onClick={onToggleSidebar}
-          className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         />
         {!isSettingsPage && currentAgent && (
           <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ 
               background: 'linear-gradient(135deg, var(--td-brand-color), var(--td-brand-color-hover))' 
             }}
@@ -76,9 +82,9 @@ export function Header({
         )}
         {isToolsPage && (
           <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md"
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{ 
-              background: 'linear-gradient(135deg, #ef4444, #f97316)' 
+              background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))' 
             }}
           >
             <Newspaper size={16} color="white" />
@@ -95,7 +101,7 @@ export function Header({
             size="small" 
             variant="light"
             style={{ 
-              background: 'linear-gradient(135deg, var(--td-brand-color-light), rgba(249, 115, 22, 0.1))',
+              background: 'var(--td-brand-color-light)',
               color: 'var(--td-brand-color)',
               border: 'none'
             }}
@@ -104,31 +110,48 @@ export function Header({
           </Tag>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <Tooltip content={theme === 'light' ? '切换到深色模式' : '切换到浅色模式'}>
-          <Button
-            variant="text"
-            shape="circle"
-            icon={theme === 'light' ? <MoonIcon /> : <SunnyIcon />}
-            onClick={onToggleTheme}
-            style={{ 
-              background: theme === 'light' ? 'var(--td-bg-color-component)' : 'var(--td-bg-color-component)',
-              transition: 'all 0.3s ease'
-            }}
-            className="hover:scale-110 transition-transform duration-300"
-          />
-        </Tooltip>
-        {!isSettingsPage && !isToolsPage && (
-          <Tooltip content="刷新模型列表">
+      <div className="flex items-center gap-1">
+        {/* 主题切换器 - 三模式 */}
+        <Popup
+          trigger="click"
+          placement="bottom-right"
+          showArrow
+          overlayInnerStyle={{ padding: '6px', borderRadius: '10px', minWidth: '140px' }}
+          content={
+            <div className="flex flex-col gap-0.5">
+              {([
+                { mode: 'light' as ThemeMode, icon: <SunnyIcon size={16} />, label: '浅色模式' },
+                { mode: 'dark' as ThemeMode, icon: <MoonIcon size={16} />, label: '深色模式' },
+                { mode: 'system' as ThemeMode, icon: <DesktopIcon size={16} />, label: '跟随系统' },
+              ]).map(item => (
+                <button
+                  key={item.mode}
+                  onClick={() => onSetThemeMode(item.mode)}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm w-full text-left transition-colors"
+                  style={{
+                    backgroundColor: themeMode === item.mode ? 'var(--td-brand-color-light)' : 'transparent',
+                    color: themeMode === item.mode ? 'var(--td-brand-color)' : 'var(--td-text-color-secondary)',
+                    fontWeight: themeMode === item.mode ? 600 : 400,
+                  }}
+                >
+                  {item.icon}
+                  {item.label}
+                  {themeMode === item.mode && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--td-brand-color)' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          <Tooltip content={themeLabel}>
             <Button
               variant="text"
               shape="circle"
-              icon={<RefreshIcon />}
-              onClick={onRefreshModels}
-              className="hover:scale-110 hover:rotate-180 transition-all duration-500"
+              icon={themeIcon}
             />
           </Tooltip>
-        )}
+        </Popup>
       </div>
     </header>
   );
