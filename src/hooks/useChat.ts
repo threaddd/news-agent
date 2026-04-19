@@ -316,6 +316,51 @@ export function useChat(options: UseChatOptions) {
     setPermissionRequest(null);
   }, []);
 
+  // 编辑消息
+  const editMessage = useCallback((messageId: string, newContent: string) => {
+    if (!currentSessionId) return;
+
+    setSessions(prev => {
+      const updated = prev.map(s => {
+        if (s.id === currentSessionId) {
+          const messageIndex = s.messages.findIndex(m => m.id === messageId);
+          if (messageIndex === -1) return s;
+
+          // 删除该消息之后的所有消息（包括 AI 回复）
+          const newMessages = s.messages.slice(0, messageIndex + 1);
+          return {
+            ...s,
+            messages: newMessages,
+            updatedAt: new Date()
+          };
+        }
+        return s;
+      });
+      saveSessionsToStorage(updated);
+      return updated;
+    });
+  }, [currentSessionId, setSessions]);
+
+  // 重新生成消息
+  const regenerateMessage = useCallback((messageId: string) => {
+    if (!currentSessionId || !currentSession) return;
+
+    // 找到该用户消息
+    const messageIndex = currentSession.messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1 || currentSession.messages[messageIndex].role !== 'user') return;
+
+    const userMessage = currentSession.messages[messageIndex];
+    const messageContent = userMessage.content;
+
+    // 删除该消息之后的所有消息
+    editMessage(messageId, messageContent);
+
+    // 延迟发送新消息
+    setTimeout(() => {
+      sendMessage(messageContent);
+    }, 100);
+  }, [currentSessionId, currentSession, editMessage, sendMessage]);
+
   return {
     isLoading,
     inputValue,
@@ -325,5 +370,7 @@ export function useChat(options: UseChatOptions) {
     handleStop,
     handlePermissionAllow,
     handlePermissionDeny,
+    editMessage,
+    regenerateMessage,
   };
 }

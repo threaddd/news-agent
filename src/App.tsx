@@ -45,6 +45,8 @@ function AppContent() {
 
   // 专家中心相关状态
   const [selectedExpert, setSelectedExpert] = useState<Expert | null>(null);
+  const [expertSkills, setExpertSkills] = useState<Expert['skills'] | null>(null);
+  const [expertColor, setExpertColor] = useState<string>('var(--td-brand-color)');
 
   // Hooks
   const { theme, mode, toggleTheme, setThemeMode } = useTheme();
@@ -75,6 +77,8 @@ function AppContent() {
     handleStop,
     handlePermissionAllow,
     handlePermissionDeny,
+    editMessage,
+    regenerateMessage,
   } = useChat({
     currentSession,
     currentSessionId,
@@ -88,6 +92,18 @@ function AppContent() {
     setCurrentSessionId,
     setSessions,
   });
+
+  // 处理消息编辑
+  const handleEditMessage = useCallback((messageId: string, newContent: string) => {
+    editMessage(messageId, newContent);
+    // 同时更新输入框
+    setInputValue(newContent);
+  }, [editMessage, setInputValue]);
+
+  // 处理消息重新生成
+  const handleRegenerate = useCallback((messageId: string) => {
+    regenerateMessage(messageId);
+  }, [regenerateMessage]);
 
   // 处理新闻工具页面选择
   const handleSelectTool = useCallback((prompt: string) => {
@@ -175,10 +191,19 @@ function AppContent() {
     navigate('/experts');
   }, [navigate]);
 
-  // 选择专家
+  // 选择专家 - 直接跳转到聊天页面使用专家技能
   const handleSelectExpert = useCallback((expert: Expert) => {
-    setSelectedExpert(expert);
-    navigate('/expert-chat');
+    // 设置专家技能和颜色
+    setExpertSkills(expert.skills || null);
+    setExpertColor(expert.color || 'var(--td-brand-color)');
+    
+    // 如果专家有技能，使用第一个技能作为初始提示
+    const initialPrompt = expert.skills && expert.skills.length > 0
+      ? expert.skills[0].prompt
+      : `你好，我是${expert.name}，${expert.description}。请问我能帮你什么？`;
+    
+    setInputValue(initialPrompt);
+    navigate('/');
   }, [navigate]);
 
   return (
@@ -202,6 +227,7 @@ function AppContent() {
         onOpenSettings={handleOpenSettings}
         onOpenTools={handleOpenTools}
         onOpenExperts={handleOpenExperts}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* 主内容区 */}
@@ -258,6 +284,10 @@ function AppContent() {
             onPermissionAllow={handlePermissionAllow}
             onPermissionDeny={handlePermissionDeny}
             onPermissionModeChange={setPermissionMode}
+            onEditMessage={handleEditMessage}
+            onRegenerate={handleRegenerate}
+            expertSkills={expertSkills}
+            expertColor={expertColor}
           />
         )}
       </main>

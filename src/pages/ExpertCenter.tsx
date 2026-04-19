@@ -206,15 +206,15 @@ export function ExpertCenter({ onSelectExpert, onBack }: ExpertCenterProps) {
         </div>
 
         {/* 底部提示 */}
-        <div 
+        <div
           className="mt-8 p-4 rounded-lg"
-          style={{ 
+          style={{
             backgroundColor: 'var(--td-brand-color-light)',
             border: '1px solid rgba(0, 82, 217, 0.1)',
           }}
         >
           <p className="text-sm text-center" style={{ color: 'var(--td-brand-color)' }}>
-            💡 点击任意专家卡片即可开始与该领域专家对话，获取专业的新闻资讯分析
+            💡 点击任意专家卡片将直接进入聊天界面，使用该专家的专业技能为您服务
           </p>
         </div>
       </div>

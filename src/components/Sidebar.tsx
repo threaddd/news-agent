@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Button, Tooltip } from 'tdesign-react';
 import { DeleteIcon, SettingIcon } from 'tdesign-icons-react';
-import { Bot, LayoutGrid, Newspaper, Plus, Users } from 'lucide-react';
+import { Bot, LayoutGrid, Newspaper, Plus, Users, X } from 'lucide-react';
 import { APP_CONFIG } from '../config';
 import { Session, Agent } from '../types';
 import { ICON_MAP } from '../utils/iconMap';
@@ -20,6 +21,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenTools: () => void;
   onOpenExperts: () => void;
+  onClose?: () => void;
 }
 
 export function Sidebar({
@@ -37,39 +39,113 @@ export function Sidebar({
   onOpenSettings,
   onOpenTools,
   onOpenExperts,
+  onClose,
 }: SidebarProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleSelectSession = (sessionId: string) => {
+    onSelectSession(sessionId);
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
+  const handleOpenSettings = () => {
+    onOpenSettings();
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <aside 
-      className="flex flex-col flex-shrink-0 transition-all duration-300 overflow-hidden border-r"
-      style={{ 
-        width: sidebarOpen ? 256 : 0,
-        background: 'var(--td-bg-color-container)',
-        borderColor: 'var(--td-component-stroke)',
-      }}
-    >
-      {/* Logo */}
-      <div className="h-14 px-4 flex items-center flex-shrink-0 border-b" style={{ borderColor: 'var(--td-component-stroke)' }}>
-        <div className="flex items-center gap-2.5">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ 
-              background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
-            }}
-          >
-            <Newspaper size={16} className="text-white" />
+    <>
+      {/* 移动端遮罩层 */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 z-40 transition-opacity duration-300"
+          onClick={onClose}
+        />
+      )}
+      
+      <aside 
+        className={`
+          flex flex-col flex-shrink-0 transition-all duration-300 overflow-hidden border-r
+          ${isMobile ? 'fixed inset-y-0 left-0 z-50' : 'relative'}
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+        style={{ 
+          width: isMobile ? 280 : (sidebarOpen ? 256 : 0),
+          background: 'var(--td-bg-color-container)',
+          borderColor: 'var(--td-component-stroke)',
+        }}
+      >
+        {/* 移动端顶部栏 */}
+        {isMobile && (
+          <div className="h-14 px-4 flex items-center justify-between flex-shrink-0 border-b" style={{ borderColor: 'var(--td-component-stroke)' }}>
+            <div className="flex items-center gap-2.5">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ 
+                  background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
+                }}
+              >
+                <Newspaper size={16} className="text-white" />
+              </div>
+              <span 
+                className="text-base font-bold"
+                style={{ 
+                  background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                {APP_CONFIG.name}
+              </span>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <X size={20} style={{ color: 'var(--td-text-color-secondary)' }} />
+            </button>
           </div>
-          <span 
-            className="text-base font-bold"
-            style={{ 
-              background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {APP_CONFIG.name}
-          </span>
-        </div>
-      </div>
+        )}
+
+        {/* Logo - 仅桌面端 */}
+        {!isMobile && (
+          <div className="h-14 px-4 flex items-center flex-shrink-0 border-b" style={{ borderColor: 'var(--td-component-stroke)' }}>
+            <div className="flex items-center gap-2.5">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ 
+                  background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
+                }}
+              >
+                <Newspaper size={16} className="text-white" />
+              </div>
+              <span 
+                className="text-base font-bold"
+                style={{ 
+                  background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                {APP_CONFIG.name}
+              </span>
+            </div>
+          </div>
+        )}
 
       {/* 快捷功能区 */}
       <div className="p-2.5 space-y-1">
@@ -143,7 +219,7 @@ export function Sidebar({
               style={{
                 backgroundColor: isActive ? 'var(--td-brand-color-light)' : 'transparent',
               }}
-              onClick={() => onSelectSession(session.id)}
+              onClick={() => handleSelectSession(session.id)}
               onMouseEnter={(e) => {
                 if (!isActive) {
                   e.currentTarget.style.backgroundColor = 'var(--td-bg-color-container-hover)';
@@ -193,7 +269,7 @@ export function Sidebar({
         style={{ borderColor: 'var(--td-component-stroke)' }}
       >
         <button
-          onClick={onOpenSettings}
+          onClick={handleOpenSettings}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
           style={{
             backgroundColor: isSettingsPage ? 'var(--td-bg-color-component)' : 'transparent',
@@ -206,5 +282,6 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+    </>
   );
 }

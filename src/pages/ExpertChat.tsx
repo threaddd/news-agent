@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Send, Square, Loader2, Copy, Check } from 'lucide-react';
-import { Expert, getExpertById } from '../data/experts';
+import { ArrowLeft, Send, Square, Loader2, Copy, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Expert, ExpertSkill, getExpertById } from '../data/experts';
 import { useChat } from '../hooks/useChat';
 import { useAgents } from '../hooks/useAgents';
 import { useSessions } from '../hooks/useSessions';
@@ -32,6 +32,7 @@ export function ExpertChat({ expert }: ExpertChatProps) {
     updateSession,
     updateSessionMessages,
   } = useSessions();
+  const [showSkills, setShowSkills] = useState(true);
 
   // 创建临时的专家 Agent
   const [expertAgentId] = useState(`expert-${expert.id}-${Date.now()}`);
@@ -73,6 +74,15 @@ export function ExpertChat({ expert }: ExpertChatProps) {
 
   const handleBack = () => {
     navigate('/experts');
+  };
+
+  // 处理技能点击
+  const handleSkillClick = (skill: ExpertSkill) => {
+    setInputValue(skill.prompt);
+    // 自动发送
+    if (skill.prompt && !isLoading) {
+      sendMessage(skill.prompt);
+    }
   };
 
   return (
@@ -132,6 +142,62 @@ export function ExpertChat({ expert }: ExpertChatProps) {
         )}
       </div>
 
+      {/* 技能面板 */}
+      {expert.skills && expert.skills.length > 0 && (
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-800">
+          {/* 技能面板头部 */}
+          <button
+            onClick={() => setShowSkills(!showSkills)}
+            className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" style={{ color: expert.color }} />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {expert.name}的专业技能
+              </span>
+              <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${expert.color}20`, color: expert.color }}>
+                {expert.skills.length}个可用
+              </span>
+            </div>
+            {showSkills ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+
+          {/* 技能列表 */}
+          {showSkills && (
+            <div className="px-4 pb-4">
+              <div className="flex flex-wrap gap-2">
+                {expert.skills.map((skill) => (
+                  <button
+                    key={skill.id}
+                    onClick={() => handleSkillClick(skill)}
+                    disabled={isLoading}
+                    className="group flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:-translate-y-0.5"
+                    style={{
+                      backgroundColor: `${skill.color}10`,
+                      border: `1px solid ${skill.color}30`,
+                    }}
+                  >
+                    <span className="text-base">{skill.icon}</span>
+                    <div className="text-left">
+                      <div className="font-medium" style={{ color: skill.color }}>
+                        {skill.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 hidden group-hover:block">
+                        {skill.description}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 输入框 */}
       <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
         <div className="flex items-end gap-3">
@@ -147,13 +213,13 @@ export function ExpertChat({ expert }: ExpertChatProps) {
                   }
                 }
               }}
-              placeholder={`向${expert.name}提问...`}
+              placeholder={`向${expert.name}提问，或点击上方技能快速开始...`}
               rows={1}
               className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3 pr-12 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               style={{ maxHeight: '120px', minHeight: '48px' }}
             />
           </div>
-          
+
           <button
             onClick={() => {
               if (isLoading) {

@@ -88,3 +88,11 @@ export interface PermissionResponse {
   behavior: 'allow' | 'deny';
   message?: string;
 }
+
+/**
+ * 消息编辑状态
+ */
+export interface EditState {
+  messageId: string;
+  content: string;
+}

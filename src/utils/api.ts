@@ -80,6 +80,17 @@ export const AI_PROVIDERS: AIProvider[] = [
     models: [
       { id: 'deepseek-chat', name: 'DeepSeek V3', description: '中国最强' },
       { id: 'deepseek-coder', name: 'DeepSeek Coder', description: '编程专用' },
+      { id: 'deepseek-reasoner', name: 'DeepSeek R1', description: '推理模型' },
+    ],
+  },
+  {
+    id: 'hunyuan',
+    name: '腾讯混元 (元宝)',
+    baseUrl: 'https://api.hunyuan.cloud.tencent.com',
+    models: [
+      { id: 'hunyuan', name: '混元-pro', description: '腾讯最强' },
+      { id: 'hunyuan-lite', name: '混元-lite', description: '轻量快速' },
+      { id: 'hunyuan-air', name: '混元-air', description: '超轻量' },
     ],
   },
   {
@@ -288,6 +299,12 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
       return;
     }
 
+    // 腾讯混元特殊处理
+    if (providerId === 'hunyuan') {
+      await sendHunyuanMessage({ apiKey, model, messages, onText, signal, onDone, onError });
+      return;
+    }
+
     const response = await fetch(`${provider.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -341,6 +358,85 @@ export async function sendMessage(options: SendMessageOptions): Promise<void> {
       throw err;
     }
     onError?.(error);
+    throw error;
+  }
+}
+
+// 腾讯混元 API (Hunyuan)
+async function sendHunyuanMessage(params: {
+  apiKey: string;
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  onText?: (content: string) => void;
+  signal?: AbortSignal;
+  onDone?: (data: { duration: number; cost: number }) => void;
+  onError?: (error: Error) => void;
+}) {
+  const { apiKey, model, messages, onText, signal, onDone, onError } = params;
+
+  try {
+    // 混元 API 需要将 messages 转换为特定格式
+    const formattedMessages = messages
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      }));
+
+    const systemInstruction = messages.find(m => m.role === 'system')?.content;
+
+    const response = await fetch(
+      `https://api.hunyuan.cloud.tencent.com/hunyuan/v1/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: formattedMessages,
+          stream: true,
+          ...(systemInstruction && { system: systemInstruction }),
+        }),
+        signal,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `混元 API 请求失败: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('无法读取响应流');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      if (signal?.aborted) { reader.cancel(); throw new Error('请求已取消'); }
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.trim() || !line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const event = JSON.parse(data);
+          if (event.choices?.[0]?.delta?.content) {
+            onText?.(event.choices[0].delta.content);
+          }
+        } catch (e) {}
+      }
+    }
+    onDone?.({ duration: 0, cost: 0 });
+
+  } catch (error) {
+    onError?.(error as Error);
     throw error;
   }
 }
