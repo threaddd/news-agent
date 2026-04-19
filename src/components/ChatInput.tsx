@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { Select, Tooltip, MessagePlugin } from 'tdesign-react';
 import { ChatSender } from '@tdesign-react/chat';
 import { ChevronDownIcon, LockOnIcon, LockOffIcon, EditIcon, TaskIcon } from 'tdesign-icons-react';
+import { Sparkles } from 'lucide-react';
 import { Model, PermissionMode } from '../types';
 
 interface ChatInputProps {
@@ -30,7 +31,7 @@ const PERMISSION_MODE_CONFIG: Record<PermissionMode, {
     shortLabel: '默认',
     icon: <LockOnIcon />, 
     color: 'var(--td-brand-color)',
-    bgColor: 'var(--td-brand-color-light)',
+    bgColor: 'rgba(239, 68, 68, 0.1)',
     description: '每次操作都需要确认'
   },
   'acceptEdits': { 
@@ -38,7 +39,7 @@ const PERMISSION_MODE_CONFIG: Record<PermissionMode, {
     shortLabel: '自动编辑',
     icon: <EditIcon />, 
     color: 'var(--td-success-color)',
-    bgColor: 'rgba(43, 164, 113, 0.08)',
+    bgColor: 'rgba(34, 197, 94, 0.1)',
     description: '自动允许文件编辑操作'
   },
   'plan': { 
@@ -46,7 +47,7 @@ const PERMISSION_MODE_CONFIG: Record<PermissionMode, {
     shortLabel: '仅规划',
     icon: <TaskIcon />, 
     color: 'var(--td-warning-color)',
-    bgColor: 'rgba(227, 115, 24, 0.08)',
+    bgColor: 'rgba(245, 158, 11, 0.1)',
     description: '只生成计划，不执行操作'
   },
   'bypassPermissions': { 
@@ -54,7 +55,7 @@ const PERMISSION_MODE_CONFIG: Record<PermissionMode, {
     shortLabel: '全部允许',
     icon: <LockOffIcon />, 
     color: 'var(--td-error-color)',
-    bgColor: 'rgba(213, 73, 65, 0.08)',
+    bgColor: 'rgba(239, 68, 68, 0.1)',
     description: '跳过所有权限确认（危险）'
   },
 };
@@ -74,6 +75,7 @@ export function ChatInput({
   const chatSenderRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   // 检测移动端
   useEffect(() => {
@@ -125,32 +127,30 @@ export function ChatInput({
 
   return (
     <div 
-      className="px-4 pb-5 pt-3 chat-input-container"
+      className="px-4 pb-5 pt-3 chat-input-container relative"
       style={{ backgroundColor: 'var(--td-bg-color-page)' }}
     >
-      <div className="max-w-3xl mx-auto">
-        {/* 输入框容器 */}
+      {/* 聚焦时的光晕效果 */}
+      {isFocused && (
         <div 
-          className="rounded-xl overflow-hidden"
+          className="absolute inset-x-4 top-0 h-32 pointer-events-none"
           style={{
-            border: '1.5px solid var(--td-component-stroke)',
+            background: 'linear-gradient(to bottom, rgba(239,68,68,0.06), transparent)',
+            filter: 'blur(20px)',
+          }}
+        />
+      )}
+      
+      <div className="max-w-3xl mx-auto relative">
+        {/* 输入框容器 - 精致设计 */}
+        <div 
+          className="rounded-2xl overflow-hidden transition-all duration-300"
+          style={{
+            border: isFocused ? '2px solid var(--td-brand-color)' : '1.5px solid var(--td-component-stroke)',
             backgroundColor: 'var(--td-bg-color-container)',
-            boxShadow: 'var(--td-shadow-1)',
-            transition: 'border-color 0.2s, box-shadow 0.2s',
-          }}
-          onFocus={() => {
-            const el = document.activeElement?.closest('.chat-input-wrapper');
-            if (el) {
-              (el as HTMLElement).style.borderColor = 'var(--td-brand-color)';
-              (el as HTMLElement).style.boxShadow = '0 0 0 2px var(--td-brand-color-focus)';
-            }
-          }}
-          onBlur={() => {
-            const el = document.querySelector('.chat-input-wrapper');
-            if (el) {
-              (el as HTMLElement).style.borderColor = 'var(--td-component-stroke)';
-              (el as HTMLElement).style.boxShadow = 'var(--td-shadow-1)';
-            }
+            boxShadow: isFocused 
+              ? '0 8px 32px rgba(239, 68, 68, 0.15), 0 2px 8px rgba(0,0,0,0.05)' 
+              : '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02)',
           }}
         >
           <div className="chat-input-wrapper" style={{ border: 'none', boxShadow: 'none' }}>
@@ -164,77 +164,88 @@ export function ChatInput({
               onSend={handleSend}
               onStop={onStop}
               onChange={handleChange}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
             >
-              {/* 桌面端显示模型和权限选择器 */}
+              {/* 桌面端显示模型和权限选择器 - 精致设计 */}
               {!isMobile && (
-                <div slot="footer-prefix" className="flex items-center gap-2.5">
-                  {/* 模型选择器 */}
-                  <Select
-                    value={selectedModel}
-                    onChange={(value) => onModelChange(value as string)}
-                    placeholder="选择模型"
-                    size="small"
-                    style={{ width: 150 }}
-                    filterable
-                    borderless
-                    suffixIcon={<ChevronDownIcon />}
+                <div slot="footer-prefix" className="flex items-center gap-3">
+                  {/* 模型选择器 - 胶囊设计 */}
+                  <div 
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-200"
+                    style={{ 
+                      backgroundColor: 'var(--td-bg-color-secondarycontainer)',
+                      border: '1px solid var(--td-component-stroke)',
+                    }}
                   >
-                    {models.map(model => (
-                      <Select.Option key={model.modelId} value={model.modelId} label={model.name}>
-                        {model.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                  
-                  {/* 分隔点 */}
-                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--td-text-color-placeholder)' }} />
-                  
-                  {/* 权限模式选择器 */}
-                  <Tooltip content={currentModeConfig.description} placement="top">
+                    <Sparkles size={14} style={{ color: 'var(--td-brand-color)' }} />
                     <Select
-                      value={permissionMode}
-                      onChange={(value) => onPermissionModeChange(value as PermissionMode)}
+                      value={selectedModel}
+                      onChange={(value) => onModelChange(value as string)}
+                      placeholder="选择模型"
                       size="small"
-                      style={{ width: 120 }}
+                      style={{ width: 140 }}
+                      filterable
                       borderless
-                      suffixIcon={<ChevronDownIcon />}
-                      prefixIcon={
-                        <span 
-                          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
-                          style={{ 
-                            color: currentModeConfig.color,
-                            backgroundColor: currentModeConfig.bgColor,
-                          }}
-                        >
-                          {currentModeConfig.icon}
-                          <span>{currentModeConfig.shortLabel}</span>
-                        </span>
-                      }
-                      popupProps={{
-                        overlayInnerStyle: { width: 160 }
+                      suffixIcon={<ChevronDownIcon size={14} />}
+                    >
+                      {models.map(model => (
+                        <Select.Option key={model.modelId} value={model.modelId} label={model.name}>
+                          {model.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                  
+                  {/* 权限模式选择器 - 精致胶囊 */}
+                  <Tooltip content={currentModeConfig.description} placement="top">
+                    <div 
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl cursor-pointer transition-all duration-200 hover:scale-[1.02]"
+                      style={{ 
+                        backgroundColor: currentModeConfig.bgColor,
+                        border: `1px solid ${currentModeConfig.color}30`,
                       }}
                     >
-                      {(Object.keys(PERMISSION_MODE_CONFIG) as PermissionMode[]).map(mode => {
-                        const config = PERMISSION_MODE_CONFIG[mode];
-                        return (
-                          <Select.Option 
-                            key={mode} 
-                            value={mode} 
-                            label={config.shortLabel}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span 
-                                className="w-5 h-5 rounded flex items-center justify-center"
-                                style={{ backgroundColor: config.bgColor, color: config.color }}
-                              >
-                                {config.icon}
-                              </span>
-                              <span className="text-sm">{config.shortLabel}</span>
-                            </div>
-                          </Select.Option>
-                        );
-                      })}
-                    </Select>
+                      <span style={{ color: currentModeConfig.color }}>
+                        {currentModeConfig.icon}
+                      </span>
+                      <Select
+                        value={permissionMode}
+                        onChange={(value) => onPermissionModeChange(value as PermissionMode)}
+                        size="small"
+                        style={{ width: 100 }}
+                        borderless
+                        suffixIcon={<ChevronDownIcon size={12} style={{ color: currentModeConfig.color }} />}
+                        popupProps={{
+                          overlayInnerStyle: { width: 180 }
+                        }}
+                      >
+                        {(Object.keys(PERMISSION_MODE_CONFIG) as PermissionMode[]).map(mode => {
+                          const config = PERMISSION_MODE_CONFIG[mode];
+                          return (
+                            <Select.Option 
+                              key={mode} 
+                              value={mode} 
+                              label={config.shortLabel}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span 
+                                  className="w-6 h-6 rounded-lg flex items-center justify-center"
+                                  style={{ backgroundColor: config.bgColor, color: config.color }}
+                                >
+                                  {config.icon}
+                                </span>
+                                <div>
+                                  <div className="text-sm font-medium" style={{ color: 'var(--td-text-color-primary)' }}>
+                                    {config.shortLabel}
+                                  </div>
+                                </div>
+                              </div>
+                            </Select.Option>
+                          );
+                        })}
+                      </Select>
+                    </div>
                   </Tooltip>
                 </div>
               )}
@@ -242,10 +253,33 @@ export function ChatInput({
           </div>
         </div>
         
-        {/* 底部提示 */}
-        <p className={`text-center text-xs mt-2 ${isMobile ? '' : 'hide-on-mobile'}`} style={{ color: 'var(--td-text-color-placeholder)' }}>
-          {isMobile ? '请核实事实性信息' : '新闻专业主义 · AI 辅助生产 · 请核实事实性信息 · Ctrl+Enter 发送'}
-        </p>
+        {/* 底部提示 - 精致设计 */}
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs" 
+            style={{ 
+              backgroundColor: 'var(--td-bg-color-secondarycontainer)',
+              color: 'var(--td-text-color-placeholder)' 
+            }}>
+            <Sparkles size={10} />
+            <span>AI 辅助生产</span>
+          </div>
+          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--td-text-color-disabled)' }} />
+          <div className="text-xs" style={{ color: 'var(--td-text-color-placeholder)' }}>
+            请核实事实性信息
+          </div>
+          {!isMobile && (
+            <>
+              <div className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--td-text-color-disabled)' }} />
+              <div className="text-xs px-2 py-0.5 rounded font-medium" 
+                style={{ 
+                  backgroundColor: 'var(--td-bg-color-secondarycontainer)',
+                  color: 'var(--td-text-color-secondary)' 
+                }}>
+                ⌘ + Enter 发送
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
