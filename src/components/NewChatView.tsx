@@ -49,7 +49,7 @@ export function NewChatView({
             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 mx-auto"
             style={{ 
               background: 'linear-gradient(135deg, var(--td-brand-color), var(--color-accent-orange))',
-              boxShadow: '0 8px 24px rgba(0, 82, 217, 0.2)',
+              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.25)',
             }}
           >
             <Newspaper size={28} className="text-white" />
@@ -85,7 +85,7 @@ export function NewChatView({
                 className="w-10 h-10 rounded-lg flex items-center justify-center mb-3 group-hover:scale-105 transition-transform"
                 style={{ 
                   backgroundColor: item.gradient,
-                  boxShadow: `0 4px 12px rgba(0, 82, 217, 0.15)`,
+                  boxShadow: `0 4px 12px rgba(239, 68, 68, 0.2)`,
                 }}
               >
                 <item.icon size={20} className="text-white" />
@@ -170,7 +170,7 @@ export function NewChatView({
             style={{ 
               background: 'var(--td-brand-color-light)',
               border: '1px solid var(--td-brand-color)',
-              borderColor: 'rgba(0, 82, 217, 0.15)',
+              borderColor: 'rgba(239, 68, 68, 0.2)',
             }}
           >
             <div className="flex items-center gap-2 mb-2">

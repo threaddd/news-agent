@@ -24,7 +24,7 @@ const categoryColors: Record<string, string> = {
   '经济': '#2BA471',
   '民生': '#E37318',
   '法治': '#7B61FF',
-  '科技': '#0052D9',
+  '科技': '#EF4444',
   '文教': '#0594FA',
   '体育': '#34C724',
   '文艺': '#F76560',
@@ -38,7 +38,7 @@ interface ExpertCardProps {
 }
 
 function ExpertCard({ expert, onSelect }: ExpertCardProps) {
-  const color = categoryColors[expert.category] || '#0052D9';
+  const color = categoryColors[expert.category] || 'var(--td-brand-color)';
   
   return (
     <button
@@ -175,7 +175,7 @@ export function ExpertCenter({ onSelectExpert, onBack }: ExpertCenterProps) {
             全部
           </button>
           {categories.map((category) => {
-            const color = categoryColors[category] || '#0052D9';
+            const color = categoryColors[category] || 'var(--td-brand-color)';
             const isActive = activeCategory === category;
             return (
               <button

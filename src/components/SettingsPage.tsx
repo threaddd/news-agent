@@ -117,6 +117,8 @@ export function SettingsPage({
   const handleSelectModel = (providerId: string, modelId: string) => {
     setCurrentProvider(providerId, modelId);
     setProviderState({ providerId, modelId });
+    // 通知其他组件刷新模型配置
+    window.dispatchEvent(new CustomEvent('modelConfigChanged'));
   };
 
   // 保存 API Key
@@ -132,6 +134,8 @@ export function SettingsPage({
       MessagePlugin.success(`${getProvider(selectedProviderId)?.name} API Key 保存成功`);
       setShowApiConfig(false);
       setIsConfigured(true);
+      // 通知其他组件刷新模型配置
+      window.dispatchEvent(new CustomEvent('modelConfigChanged'));
     } catch (error) {
       MessagePlugin.error('保存失败');
     } finally {
