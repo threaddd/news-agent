@@ -11,7 +11,7 @@ document.title = APP_CONFIG.name;
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter basename="/news-agent">
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}>
       <App />
     </BrowserRouter>
   </React.StrictMode>,
