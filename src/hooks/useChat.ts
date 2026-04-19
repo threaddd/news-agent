@@ -147,8 +147,8 @@ export function useChat(options: UseChatOptions) {
     const controller = new AbortController();
     setAbortController(controller);
 
-    // 获取当前使用的提供商 ID
-    const effectiveProviderId = currentSession?.providerId || selectedProviderId || 'groq';
+    // 获取当前使用的提供商 ID - 优先使用当前选择的，而非旧会话中的
+    const effectiveProviderId = selectedProviderId || currentSession?.providerId || 'groq';
     
     try {
       await apiSendMessage({
